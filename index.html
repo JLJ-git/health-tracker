@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Health">
+  <meta name="theme-color" content="#161616">
+  <title>Health Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ━━━ THEME VARIABLES ━━━ */
+    :root {
+      --bg:          #111111;
+      --surface:     #1C1C1C;
+      --surface-hi:  #252525;
+      --border:      #2C2C2C;
+      --border-hi:   #383838;
+      --text:        #F4F4F5;
+      --text-2:      #A1A1AA;
+      --text-3:      #71717A;
+      --accent:      #22C55E;
+      --accent-text: #0A2714;
+      --header-bg:   #161616;
+      --nav-bg:      #1C1C1C;
+      --nav-border:  #2C2C2C;
+      --nav-inactive:#52525B;
+      --nav-active:  #22C55E;
+      /* RAG */
+      --g:      #22C55E; --g-bg: rgba(34,197,94,0.13); --g-text: #86EFAC;
+      --a:      #F59E0B; --a-bg: rgba(245,158,11,0.13); --a-text: #FCD34D;
+      --r:      #EF4444; --r-bg: rgba(239,68,68,0.13);  --r-text: #FCA5A5;
+      --x-bg:   rgba(255,255,255,0.04); --x-text: #71717A;
+      /* Toggle buttons */
+      --tog-bg:      #252525;
+      --tog-border:  #363636;
+      --tog-text:    #A1A1AA;
+      --sel-good:    #22C55E; --sel-good-text: #0A2714;
+      --sel-bad:     #EF4444; --sel-bad-text:  #fff;
+      --sel-neutral: #52525B; --sel-neutral-text: #fff;
+      /* Cards & misc */
+      --period-bg:   #212121;
+      --warn-bg:     rgba(245,158,11,0.1);
+      --warn-border: rgba(245,158,11,0.3);
+      --warn-text:   #FCD34D;
+      --success-bg:  rgba(34,197,94,0.12);
+      --success-text:#86EFAC;
+      --notif-bg:    #1C2A38;
+      --notif-border:#1E3A52;
+      --notif-text:  #93C5FD;
+      --notif-btn:   #60A5FA;
+      --radius-card: 11px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px var(--border);
+    }
+
+    :root[data-theme="light"] {
+      --bg:          #FAFAF9;
+      --surface:     #FFFFFF;
+      --surface-hi:  #F5F4F2;
+      --border:      #E7E5E4;
+      --border-hi:   #D6D3D1;
+      --text:        #1C1917;
+      --text-2:      #78716C;
+      --text-3:      #A8A29E;
+      --accent:      #16A34A;
+      --accent-text: #FFFFFF;
+      --header-bg:   #161616;
+      --nav-bg:      #FFFFFF;
+      --nav-border:  #E7E5E4;
+      --nav-inactive:#A8A29E;
+      --nav-active:  #16A34A;
+      /* RAG */
+      --g:      #15803D; --g-bg: #DCFCE7; --g-text: #166534;
+      --a:      #D97706; --a-bg: #FEF3C7; --a-text: #92400E;
+      --r:      #DC2626; --r-bg: #FEE2E2; --r-text: #991B1B;
+      --x-bg:   #F5F4F2; --x-text: #A8A29E;
+      /* Toggle buttons */
+      --tog-bg:      #FFFFFF;
+      --tog-border:  #E7E5E4;
+      --tog-text:    #78716C;
+      --sel-good:    #16A34A; --sel-good-text: #FFFFFF;
+      --sel-bad:     #DC2626; --sel-bad-text:  #FFFFFF;
+      --sel-neutral: #78716C; --sel-neutral-text: #FFFFFF;
+      /* Cards & misc */
+      --period-bg:   #F5F4F2;
+      --warn-bg:     #FFFBEB;
+      --warn-border: #FDE68A;
+      --warn-text:   #92400E;
+      --success-bg:  #DCFCE7;
+      --success-text:#166534;
+      --notif-bg:    #EFF6FF;
+      --notif-border:#BFDBFE;
+      --notif-text:  #1E40AF;
+      --notif-btn:   #2563EB;
+      --shadow-card: 0 1px 4px rgba(0,0,0,0.07);
+    }
+
+    /* ━━━ BASE ━━━ */
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      -webkit-text-size-adjust: 100%;
+      transition: background 0.2s, color 0.2s;
+    }
+    #app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ━━━ HEADER ━━━ */
+    #header {
+      background: var(--header-bg);
+      color: #F4F4F5;
+      padding: 0 16px 12px;
+      padding-top: max(14px, env(safe-area-inset-top));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .hdr-left { display: flex; align-items: center; gap: 10px; }
+    .hdr-logo {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .hdr-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: #F4F4F5; }
+    .hdr-right { display: flex; align-items: center; gap: 8px; }
+    .theme-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(255,255,255,0.09); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #A1A1AA; -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    .theme-btn:active { background: rgba(255,255,255,0.15); }
+    .badge {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 9px; border-radius: 20px;
+    }
+    .badge-warn { background: rgba(245,158,11,0.2); color: #FCD34D; }
+    .badge-ok   { background: rgba(34,197,94,0.18); color: #86EFAC; }
+
+    /* ━━━ NOTIF BANNER ━━━ */
+    #notif-banner {
+      background: var(--notif-bg);
+      border-bottom: 1px solid var(--notif-border);
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .nb-text { font-size: 13px; color: var(--notif-text); }
+    .nb-btn  { font-size: 13px; font-weight: 600; color: var(--notif-btn); background: none; border: none; cursor: pointer; }
+
+    /* ━━━ MAIN ━━━ */
+    #main {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 12px 20px;
+    }
+
+    /* ━━━ BOTTOM NAV ━━━ */
+    #nav {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--nav-border);
+      background: var(--nav-bg);
+      flex-shrink: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 10px 4px; border: none; background: none; cursor: pointer;
+      gap: 3px; -webkit-tap-highlight-color: transparent; color: var(--nav-inactive);
+      transition: color 0.15s;
+    }
+    .nav-btn.active { color: var(--nav-active); }
+    .nav-btn svg { display: block; }
+    .nav-lbl { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1px; }
+
+    /* ━━━ CARDS ━━━ */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-card);
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow-card);
+    }
+    .sec-hdr {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--text-3);
+      margin: 10px 0 5px;
+    }
+    .sec-hdr:first-child { margin-top: 2px; }
+
+    /* ━━━ TODAY BAR ━━━ */
+    .today-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); border-radius: var(--radius-card);
+      padding: 10px 13px; margin-bottom: 8px;
+      box-shadow: var(--shadow-card);
+    }
+    .today-sub    { font-size: 10px; color: var(--text-3); margin-bottom: 1px; font-weight: 500; }
+    .today-date   { font-size: 15px; font-weight: 700; }
+    .today-period { font-size: 9.5px; color: var(--text-3); margin-top: 2px; font-weight: 500; }
+    .ci-btn {
+      background: var(--accent); color: var(--accent-text);
+      border: none; border-radius: 20px;
+      padding: 8px 16px; font-size: 13px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+    }
+    .ci-btn:active { opacity: 0.85; }
+    .ok-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--g-bg); color: var(--g-text);
+      border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: 600;
+    }
+
+    /* ━━━ RAG ROWS ━━━ */
+    .rag-row {
+      display: flex; align-items: center;
+      padding: 5px 10px; border-radius: 7px; margin-bottom: 3px; gap: 8px;
+    }
+    .rag-row:last-child { margin-bottom: 0; }
+    .rag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .rag-name { font-size: 12.5px; font-weight: 500; flex: 1; }
+    .rag-score { font-size: 12.5px; font-weight: 700; }
+    .rag-g { background: var(--g-bg); color: var(--g-text); }  .rag-g .rag-dot { background: var(--g); }
+    .rag-a { background: var(--a-bg); color: var(--a-text); }  .rag-a .rag-dot { background: var(--a); }
+    .rag-r { background: var(--r-bg); color: var(--r-text); }  .rag-r .rag-dot { background: var(--r); }
+    .rag-x { background: var(--x-bg); color: var(--x-text); }  .rag-x .rag-dot { background: var(--text-3); }
+
+    /* ━━━ TOOLTIP ━━━ */
+    .tip-btn {
+      width: 15px; height: 15px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border-hi);
+      color: var(--text-3); font-size: 9px; font-weight: 700;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0; line-height: 1; padding: 0; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    :root[data-theme="light"] .tip-btn {
+      background: var(--surface-hi);
+    }
+    #tip-box {
+      position: fixed; z-index: 9999;
+      background: var(--surface-hi); border: 1px solid var(--border-hi);
+      border-radius: 9px; padding: 8px 11px;
+      font-size: 12px; color: var(--text-2);
+      max-width: 220px; line-height: 1.45;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      display: none; pointer-events: none;
+    }
+
+    /* ━━━ CHECK-IN ━━━ */
+    .period-box {
+      background: var(--period-bg); border-radius: 9px;
+      padding: 10px 12px; margin-bottom: 12px;
+    }
+    .pb-lbl { font-size: 10.5px; color: var(--text-3); font-weight: 500; margin-bottom: 2px; }
+    .pb-val  { font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+    .already-banner {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: 9px; padding: 8px 12px;
+      font-size: 12px; color: var(--warn-text);
+      margin-bottom: 8px;
+    }
+    .success-bar {
+      background: var(--success-bg); color: var(--success-text);
+      border-radius: 9px; padding: 12px 14px;
+      font-size: 14px; font-weight: 600;
+      text-align: center; margin-bottom: 12px;
+    }
+
+    .grp-card {
+      background: var(--surface); border-radius: var(--radius-card);
+      padding: 14px; margin-bottom: 10px;
+      box-shadow: var(--shadow-card);
+    }
+    .grp-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); }
+    .grp-sub   { font-size: 12px; color: var(--text-2); margin-top: 1px; margin-bottom: 12px; }
+
+    .q-item { margin-bottom: 13px; }
+    .q-item:last-child { margin-bottom: 0; }
+    .q-lbl    { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 1px; }
+    .q-detail { font-size: 11px; color: var(--text-3); margin-bottom: 7px; }
+
+    .tog-grp  { display: flex; gap: 8px; }
+    .tog-btn {
+      flex: 1; padding: 10px 6px; border-radius: 9px;
+      border: 1.5px solid var(--tog-border);
+      background: var(--tog-bg);
+      color: var(--tog-text);
+      font-size: 12.5px; font-weight: 600; cursor: pointer;
+      text-align: center; -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      line-height: 1.2;
+    }
+    .tog-btn.sg { background: var(--sel-good);    border-color: var(--sel-good);    color: var(--sel-good-text);    }
+    .tog-btn.sb { background: var(--sel-bad);     border-color: var(--sel-bad);     color: var(--sel-bad-text);     }
+    .tog-btn.sn { background: var(--sel-neutral); border-color: var(--sel-neutral); color: var(--sel-neutral-text); }
+
+    .sub-btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      background: var(--accent); color: var(--accent-text);
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 6px; -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+    }
+    .sub-btn:disabled { background: var(--surface-hi); color: var(--text-3); border: 1.5px solid var(--border); cursor: default; }
+    .sub-btn:not(:disabled):active { opacity: 0.85; }
+
+    /* ━━━ COMPACT CHECK-IN ━━━ */
+    .ci-period {
+      font-size: 11px; color: var(--text-3); text-align: center;
+      padding: 0 0 8px; font-weight: 500;
+    }
+    .ci-sec-hdr {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.9px;
+      text-transform: uppercase; color: var(--text-3);
+      margin: 8px 0 3px 2px;
+    }
+    .ci-sec-hdr:first-of-type { margin-top: 0; }
+    .ci-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px; background: var(--surface);
+      border-radius: 8px; margin-bottom: 3px;
+      box-shadow: var(--shadow-card); height: 38px;
+    }
+    .ci-q { font-size: 12.5px; font-weight: 500; color: var(--text); flex: 1; display: flex; align-items: center; gap: 5px; }
+    .ci-btns { display: flex; gap: 5px; flex-shrink: 0; }
+    .ci-tog {
+      width: 76px; padding: 5px 4px; border-radius: 6px;
+      border: 1.5px solid var(--tog-border);
+      background: var(--tog-bg); color: var(--tog-text);
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      white-space: nowrap; text-align: center;
+    }
+    .ci-tog.sg { background: var(--sel-good);    border-color: var(--sel-good);    color: var(--sel-good-text);    }
+    .ci-tog.sb { background: var(--sel-bad);     border-color: var(--sel-bad);     color: var(--sel-bad-text);     }
+    .ci-tog.sn { background: var(--sel-neutral); border-color: var(--sel-neutral); color: var(--sel-neutral-text); }
+
+    /* ━━━ HISTORY ━━━ */
+    .hist-card {
+      background: var(--surface); border-radius: var(--radius-card);
+      padding: 12px 14px; margin-bottom: 8px;
+      box-shadow: var(--shadow-card);
+    }
+    .hist-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+    .hist-date  { font-size: 14px; font-weight: 700; }
+    .hist-score { font-size: 13px; font-weight: 700; }
+    .hs-g { color: var(--g); }
+    .hs-a { color: var(--a); }
+    .hs-r { color: var(--r); }
+
+    .hist-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .h-tag { font-size: 10.5px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+    .ht-g { background: var(--g-bg); color: var(--g-text); }
+    .ht-b { background: var(--r-bg); color: var(--r-text); }
+    .ht-n { background: var(--x-bg); color: var(--x-text); }
+
+    /* ━━━ ALERTS ━━━ */
+    .alert-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .alert-row:last-child { border-bottom: none; }
+    .al-time-input {
+      background: transparent; border: none; outline: none;
+      color: var(--accent); font-size: 14px; font-weight: 800;
+      font-family: inherit; font-variant-numeric: tabular-nums;
+      width: 88px; flex-shrink: 0; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .al-time-input:disabled { color: var(--text-3); cursor: default; }
+    .al-msg { font-size: 12.5px; color: var(--text-2); flex: 1; line-height: 1.35; }
+    .al-msg.disabled { color: var(--text-3); }
+
+    /* iOS-style toggle switch */
+    .sw-wrap {
+      position: relative; width: 42px; height: 25px; flex-shrink: 0; cursor: pointer;
+    }
+    .sw-inp {
+      opacity: 0; width: 0; height: 0; position: absolute;
+    }
+    .sw-sldr {
+      position: absolute; inset: 0; border-radius: 13px;
+      background: var(--border-hi); transition: background 0.2s;
+    }
+    .sw-sldr::before {
+      content: ''; position: absolute;
+      width: 19px; height: 19px; border-radius: 50%;
+      left: 3px; top: 3px; background: #fff;
+      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .sw-inp:checked + .sw-sldr { background: var(--accent); }
+    .sw-inp:checked + .sw-sldr::before { transform: translateX(17px); }
+
+    .notif-status {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 13px; border-radius: 9px; margin-bottom: 8px;
+      font-size: 13px; font-weight: 500;
+    }
+    .ns-on  { background: var(--g-bg); color: var(--g-text); }
+    .ns-off { background: var(--r-bg); color: var(--r-text); }
+    .ns-unk { background: var(--x-bg); color: var(--x-text); }
+    .en-btn {
+      width: 100%; padding: 13px; border-radius: 10px; border: none;
+      background: var(--accent); color: var(--accent-text);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      margin-top: 4px; -webkit-tap-highlight-color: transparent;
+    }
+    .en-btn:active { opacity: 0.85; }
+    .info-card {
+      font-size: 12.5px; color: var(--text-2); line-height: 1.65;
+    }
+    .info-card strong { color: var(--text); font-weight: 600; }
+
+    /* ━━━ SETTINGS ━━━ */
+    .sett-row { display: flex; flex-direction: column; gap: 5px; }
+    .sett-lbl { font-size: 12px; font-weight: 600; color: var(--text-2); letter-spacing: 0.2px; }
+    .sett-inp {
+      background: var(--surface-hi); border: 1.5px solid var(--border-hi);
+      border-radius: 8px; padding: 10px 12px; color: var(--text);
+      font-size: 14px; font-family: inherit; outline: none; width: 100%;
+    }
+    .sett-inp:focus { border-color: var(--accent); }
+    .sett-inp::placeholder { color: var(--text-3); }
+    .sett-clear-btn {
+      width: 100%; margin-top: 8px; padding: 11px; border-radius: 10px;
+      border: 1.5px solid var(--border-hi); background: transparent;
+      color: var(--r); font-size: 14px; font-weight: 600; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sett-clear-btn:active { opacity: 0.75; }
+
+    /* ━━━ EMPTY ━━━ */
+    .empty { text-align: center; padding: 64px 20px; color: var(--text-3); }
+    .ei { font-size: 44px; margin-bottom: 14px; }
+    .et { font-size: 14px; line-height: 1.55; }
+
+    /* ━━━ AGGREGATE CARD ━━━ */
+    .agg-card {
+      background: var(--surface); border-radius: var(--radius-card);
+      padding: 12px; margin-bottom: 8px; box-shadow: var(--shadow-card);
+    }
+    .agg-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .agg-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); display: flex; align-items: center; gap: 5px; }
+    .agg-rag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+    .agg-rag.rag-g { background: var(--g-bg); color: var(--g-text); }
+    .agg-rag.rag-a { background: var(--a-bg); color: var(--a-text); }
+    .agg-rag.rag-r { background: var(--r-bg); color: var(--r-text); }
+    .agg-num { display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
+    .agg-score { font-size: 34px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+    .agg-max   { font-size: 14px; font-weight: 500; color: var(--text-3); }
+    .chart-wrap { position: relative; }
+
+    /* ━━━ CLICKABLE RAG ROWS ━━━ */
+    .rag-row.clickable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .rag-row.clickable:active { opacity: 0.7; }
+    .rag-chev { font-size: 13px; color: var(--text-3); margin-left: 2px; flex-shrink: 0; }
+
+    /* ━━━ METRIC DETAIL ━━━ */
+    .back-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); font-size: 13px; font-weight: 600;
+      padding: 0 0 14px; -webkit-tap-highlight-color: transparent;
+    }
+    .det-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; }
+    .det-sub   { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+    .det-stat  { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 9px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <div class="hdr-left">
+      <div class="hdr-logo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-text)" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L11 13.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l5-5a1 1 0 000-1.414z"/>
+        </svg>
+      </div>
+      <div class="hdr-title">Health Tracker</div>
+      <span id="sync-dot" style="font-size:10px;font-weight:600;letter-spacing:0.2px;flex-shrink:0;margin-left:4px"></span>
+    </div>
+    <div class="hdr-right">
+      <button class="theme-btn" onclick="toggleTheme()" title="Toggle light/dark">
+        <span id="theme-icon"></span>
+      </button>
+      <div id="hdr-badge"></div>
+    </div>
+  </header>
+  <div id="notif-banner">
+    <span class="nb-text">Enable daily alerts for reminders</span>
+    <button class="nb-btn" onclick="requestNotif()">Enable</button>
+  </div>
+  <main id="main"></main>
+  <nav id="nav"></nav>
+  <div id="tip-box"></div>
+</div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SVG ICONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const ICONS = {
+  dashboard: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="13" width="5" height="8" rx="1.5"/>
+    <rect x="9.5" y="8" width="5" height="13" rx="1.5"/>
+    <rect x="17" y="4" width="5" height="17" rx="1.5"/>
+  </svg>`,
+  checkin: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L11 13.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l5-5a1 1 0 000-1.414z"/>
+  </svg>`,
+  history: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="4"  width="18" height="2.5" rx="1.25"/>
+    <rect x="3" y="9"  width="18" height="2.5" rx="1.25"/>
+    <rect x="3" y="14" width="12" height="2.5" rx="1.25"/>
+    <rect x="3" y="19" width="8"  height="2.5" rx="1.25"/>
+  </svg>`,
+  alerts: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2a7 7 0 00-7 7v4.586L3.293 15.293A1 1 0 004 17h16a1 1 0 00.707-1.707L19 13.586V9a7 7 0 00-7-7z"/>
+    <path d="M10.268 21a2 2 0 003.464 0H10.268z"/>
+  </svg>`,
+  sun: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="4"/>
+    <line x1="12" y1="2"  x2="12" y2="5"/>
+    <line x1="12" y1="19" x2="12" y2="22"/>
+    <line x1="2"  y1="12" x2="5"  y2="12"/>
+    <line x1="19" y1="12" x2="22" y2="12"/>
+    <line x1="4.93" y1="4.93"   x2="7.05" y2="7.05"/>
+    <line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/>
+    <line x1="4.93"  y1="19.07" x2="7.05"  y2="16.95"/>
+    <line x1="16.95" y1="7.05"  x2="19.07" y2="4.93"/>
+  </svg>`,
+  moon: `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+  </svg>`,
+  checkmark: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M19.707 6.293a1 1 0 00-1.414 0L10 14.586l-3.293-3.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l9-9a1 1 0 000-1.414z"/>
+  </svg>`,
+  settings: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.02.12-.115.26-.297.348a7.493 7.493 0 00-.986.57c-.166.115-.334.126-.45.083L6.3 5.508a1.875 1.875 0 00-2.282.819l-.922 1.597a1.875 1.875 0 00.432 2.385l.84.692c.095.078.17.229.154.43a7.598 7.598 0 000 1.139c.015.2-.059.352-.153.43l-.841.692a1.875 1.875 0 00-.432 2.385l.922 1.597a1.875 1.875 0 002.282.818l1.019-.382c.115-.043.283-.031.45.082.312.214.641.405.985.57.182.088.277.228.297.35l.178 1.071c.151.904.933 1.567 1.85 1.567h1.844c.916 0 1.699-.663 1.85-1.567l.178-1.072c.02-.12.114-.26.297-.349.344-.165.673-.356.985-.57.167-.114.335-.125.45-.082l1.02.382a1.875 1.875 0 002.28-.819l.923-1.597a1.875 1.875 0 00-.432-2.385l-.84-.692c-.095-.078-.17-.229-.154-.43a7.614 7.614 0 000-1.139c-.016-.2.059-.352.153-.43l.84-.692c.708-.582.891-1.59.433-2.385l-.922-1.597a1.875 1.875 0 00-2.282-.818l-1.02.382c-.114.043-.282.031-.449-.083a7.49 7.49 0 00-.985-.57c-.183-.087-.277-.227-.297-.348l-.179-1.072a1.875 1.875 0 00-1.85-1.567h-1.843zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z"/>
+  </svg>`,
+};
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// DATA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const QUESTIONS = [
+  { id:'sweets',   group:'zero',     label:'Sweets',              detail:'Sugary or artificially sweetened foods & drinks',  yesLabel:'Had some',  noLabel:'None'     },
+  { id:'carbs',    group:'zero',     label:'Simple carbs',        detail:'Bread, pasta, noodles, potatoes (rice OK)',        yesLabel:'Had some',  noLabel:'None'     },
+  { id:'redMeat',  group:'zero',     label:'Red meat',            detail:'Beef, pork, lamb, bacon',                         yesLabel:'Had some',  noLabel:'None'     },
+  { id:'dairy',    group:'zero',     label:'Fatty dairy',         detail:'Cheese, ice cream',                               yesLabel:'Had some',  noLabel:'None'     },
+  { id:'caffeine', group:'zero',     label:'Caffeine after 12pm', detail:'Any caffeinated drinks after midday',             yesLabel:'Had some',  noLabel:'None'     },
+  { id:'alcohol',  group:'zero',     label:'Alcohol',             detail:'',                                                yesLabel:'Had some',  noLabel:'None'     },
+  { id:'fast',     group:'daily',    label:'16hr fast',           detail:'8pm last night to 12pm today',                   yesLabel:'Completed', noLabel:'Missed'   },
+  { id:'sleep',    group:'daily',    label:'9hrs in bed',         detail:'9pm to 6am',                                     yesLabel:'Completed', noLabel:'Missed'   },
+  { id:'exercise', group:'exercise', label:'45+ min exercise',    detail:'Target: 4 sessions per week',                    yesLabel:'Did it',    noLabel:'Rest day' },
+];
+
+const GROUPS = [
+  { key:'zero',     label:'Avoid',          sub:'Did you have any of these?'  },
+  { key:'daily',    label:'Daily schedule', sub:'Did you complete these?'     },
+  { key:'exercise', label:'Exercise',       sub:'Did you work out today?'     },
+];
+
+const DEFAULT_ALERTS = [
+  { hh:12, mm:0,  title:'Health Tracker',  body:'Break your fast, update your tracker and eat lunch', enabled:true },
+  { hh:18, mm:0,  title:'Dinner Time',     body:'Time to eat dinner',                                  enabled:true },
+  { hh:20, mm:0,  title:'Start Fasting',   body:'Nothing except water after this point',               enabled:true },
+  { hh:20, mm:30, title:'Bed Time',        body:'Time to head to bed',                                 enabled:true },
+  { hh:21, mm:0,  title:'Lights Out',      body:'Sleep time — lights out',                             enabled:true },
+];
+
+const ZERO_IDS = new Set(['sweets','carbs','redMeat','dairy','caffeine','alcohol']);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GIST SYNC
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const GIST_FILE = 'health-tracker-data.json';
+
+function getGistConfig() {
+  return {
+    id:    localStorage.getItem('ht_gist_id')    || '',
+    token: localStorage.getItem('ht_gist_token') || ''
+  };
+}
+function gistConfigured() { const c = getGistConfig(); return !!(c.id && c.token); }
+
+function setSyncStatus(s) {
+  const el = document.getElementById('sync-dot');
+  if (!el) return;
+  const colors = { syncing:'#F59E0B', synced:'#22C55E', error:'#EF4444' };
+  const labels = { syncing:'syncing', synced:'synced', error:'error' };
+  el.style.color = colors[s] || '#52525B';
+  el.textContent = labels[s] || '';
+}
+
+async function loadFromGist() {
+  if (!gistConfigured()) return;
+  const { id, token } = getGistConfig();
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${id}`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const content = data.files[GIST_FILE]?.content;
+    if (content) {
+      const gistEntries = JSON.parse(content);
+      const localEntries = loadEntries();
+      const gistDates = new Set(gistEntries.map(e => e.date));
+      const localOnly = localEntries.filter(e => !gistDates.has(e.date));
+      const merged = [...gistEntries, ...localOnly].sort((a,b) => b.date.localeCompare(a.date));
+      localStorage.setItem(KEY, JSON.stringify(merged));
+      if (localOnly.length > 0) await saveToGist(merged);
+    }
+    setSyncStatus('synced');
+  } catch {
+    setSyncStatus('error');
+  }
+  render();
+}
+
+async function saveToGist(entries) {
+  if (!gistConfigured()) return;
+  const { id, token } = getGistConfig();
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(entries) } } })
+    });
+    if (!res.ok) throw new Error();
+    setSyncStatus('synced');
+  } catch {
+    setSyncStatus('error');
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STORAGE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const KEY = 'ht_v1';
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+  catch { return []; }
+}
+function saveEntry(entry) {
+  const entries = loadEntries();
+  const i = entries.findIndex(e => e.date === entry.date);
+  if (i >= 0) entries[i] = entry; else entries.push(entry);
+  entries.sort((a,b) => b.date.localeCompare(a.date));
+  localStorage.setItem(KEY, JSON.stringify(entries));
+  saveToGist(entries);
+}
+function getEntryForDate(date) { return loadEntries().find(e => e.date === date) || null; }
+function getLastN(n) { return loadEntries().slice(0, n); }
+
+function loadAlerts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('ht_alerts'));
+    if (stored && Array.isArray(stored) && stored.length === DEFAULT_ALERTS.length) return stored;
+  } catch {}
+  return DEFAULT_ALERTS.map(a => ({ ...a }));
+}
+function saveAlerts(alerts) {
+  localStorage.setItem('ht_alerts', JSON.stringify(alerts));
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// UTILITIES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function fmtDate(str) {
+  return new Date(str + 'T12:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+function fmtPeriod(str) {
+  const d = new Date(str + 'T12:00:00');
+  const p = new Date(d); p.setDate(p.getDate() - 1);
+  const f = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  return `${f(p)} 12pm → ${f(d)} 12pm`;
+}
+function fmtPeriodShort(str) {
+  const d = new Date(str + 'T12:00:00');
+  const p = new Date(d); p.setDate(p.getDate() - 1);
+  const wd = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  return `${wd(p)} 12pm → ${wd(d)} 12pm`;
+}
+
+function isCompliant(qid, val) {
+  if (val === null || val === undefined) return null;
+  return ZERO_IDS.has(qid) ? val === false : val === true;
+}
+function getRAG(qid, entries) {
+  if (!entries.length) return null;
+  const c = entries.filter(e => isCompliant(qid, e[qid]) === true).length;
+  const r = c / entries.length;
+  return qid === 'exercise'
+    ? (r >= 4/7 ? 'g' : r >= 3/7 ? 'a' : 'r')
+    : (r >= 6/7 ? 'g' : r >= 5/7 ? 'a' : 'r');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TOOLTIP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function showTip(btn, text) {
+  event.stopPropagation();
+  const box = document.getElementById('tip-box');
+  box.textContent = text;
+  box.style.display = 'block';
+  const r = btn.getBoundingClientRect();
+  let top = r.bottom + 6;
+  let left = r.left - 90;
+  if (left < 8) left = 8;
+  if (left + 228 > window.innerWidth) left = window.innerWidth - 236;
+  if (top + 80 > window.innerHeight) top = r.top - 76;
+  box.style.top = top + 'px';
+  box.style.left = left + 'px';
+}
+document.addEventListener('click', () => {
+  const box = document.getElementById('tip-box');
+  if (box) box.style.display = 'none';
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// THEME
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let dark = localStorage.getItem('ht_theme')
+  ? localStorage.getItem('ht_theme') === 'dark'
+  : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('theme-icon').innerHTML = dark ? ICONS.sun : ICONS.moon;
+}
+function toggleTheme() {
+  dark = !dark;
+  localStorage.setItem('ht_theme', dark ? 'dark' : 'light');
+  applyTheme();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NOTIFICATIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let notifTimeouts = [];
+
+function clearNotifTimeouts() {
+  notifTimeouts.forEach(clearTimeout);
+  notifTimeouts = [];
+}
+
+function scheduleNotifications() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  clearNotifTimeouts();
+  const now = new Date();
+  loadAlerts().filter(a => a.enabled).forEach(({ hh, mm, title, body }) => {
+    const t = new Date(); t.setHours(hh, mm, 0, 0);
+    const ms = t - now;
+    if (ms > 0) {
+      const tid = setTimeout(() => { try { new Notification(title, { body, tag:`ht-${hh}-${mm}` }); } catch {} }, ms);
+      notifTimeouts.push(tid);
+    }
+  });
+}
+function requestNotif() {
+  if (typeof Notification === 'undefined') return;
+  Notification.requestPermission().then(p => {
+    updateBanner();
+    if (p === 'granted') scheduleNotifications();
+    if (view === 'alerts') render();
+  });
+}
+function notifState() {
+  if (typeof Notification === 'undefined') return 'unsupported';
+  return Notification.permission;
+}
+function updateBanner() {
+  document.getElementById('notif-banner').style.display = notifState() === 'default' ? 'flex' : 'none';
+}
+
+function toggleAlert(i) {
+  const alerts = loadAlerts();
+  alerts[i].enabled = !alerts[i].enabled;
+  saveAlerts(alerts);
+  scheduleNotifications();
+  document.getElementById('main').innerHTML = renderAlerts();
+}
+
+function updateAlertTime(i, val) {
+  const alerts = loadAlerts();
+  const parts = val.split(':').map(Number);
+  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+    alerts[i].hh = parts[0]; alerts[i].mm = parts[1];
+    saveAlerts(alerts);
+    scheduleNotifications();
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let view = 'dashboard';
+let ciAnswers = {};
+let ciSubmitted = false;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CHARTS & AGGREGATE
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+let _uid = 0;
+
+function calcDailyScore(entry) {
+  return QUESTIONS.filter(q => isCompliant(q.id, entry[q.id]) === true).length;
+}
+function calcAggregateScore(entries) {
+  return entries.reduce((s, e) => s + calcDailyScore(e), 0);
+}
+function getAggregateRAG(score) {
+  return score >= 52 ? 'g' : score >= 43 ? 'a' : 'r';
+}
+function dayLabel(dateStr) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+}
+
+function rollingAggregates(numPoints) {
+  const all = loadEntries();
+  const result = [];
+  for (let i = 0; i < Math.min(numPoints, all.length); i++) {
+    const w = all.slice(i, i + 7);
+    result.push({ date: all[i].date, score: calcAggregateScore(w) });
+  }
+  return result.reverse();
+}
+
+function rollingMetric(qid, numPoints) {
+  const all = loadEntries();
+  const result = [];
+  for (let i = 0; i < Math.min(numPoints, all.length); i++) {
+    const w = all.slice(i, i + 7);
+    const count = w.filter(e => isCompliant(qid, e[qid]) === true).length;
+    result.push({ date: all[i].date, count });
+  }
+  return result.reverse();
+}
+
+function svgLineChart({ points, maxY, minY = 0, refLines = [], colorFn, lineColor = 'var(--accent)', showFill = true }) {
+  if (!points || points.length < 2) {
+    return `<p style="text-align:center;color:var(--text-3);font-size:12px;padding:16px 0">Not enough data yet</p>`;
+  }
+  const VW = 320, VH = 80, pad = { t:6, r:6, b:22, l:28 };
+  const cw = VW - pad.l - pad.r, ch = VH - pad.t - pad.b;
+  const n = points.length;
+  const sx = i => pad.l + (n > 1 ? (i/(n-1))*cw : cw/2);
+  const sy = y => pad.t + (1 - (y - minY)/((maxY - minY) || 1))*ch;
+  const f = v => v.toFixed(1);
+  const uid = 'g' + (++_uid);
+
+  const pathD = points.map((p,i) => `${i?'L':'M'}${f(sx(i))},${f(sy(p.y))}`).join('');
+  const areaD = `${pathD}L${f(sx(n-1))},${f(sy(minY))}L${f(sx(0))},${f(sy(minY))}Z`;
+
+  const refs = refLines.map(r =>
+    `<line x1="${f(pad.l)}" y1="${f(sy(r.y))}" x2="${f(pad.l+cw)}" y2="${f(sy(r.y))}"
+       stroke="${r.color}" stroke-width="1" stroke-dasharray="3,2" opacity="0.55"/>
+     <text x="${pad.l-3}" y="${f(sy(r.y)+3.5)}" text-anchor="end" fill="${r.color}" font-size="8" opacity="0.75">${r.y}</text>`
+  ).join('');
+
+  const dots = points.map((p,i) => {
+    const c = colorFn ? colorFn(p.y) : lineColor;
+    return `<circle cx="${f(sx(i))}" cy="${f(sy(p.y))}" r="3" fill="${c}" stroke="var(--surface)" stroke-width="1.5"/>`;
+  }).join('');
+
+  const step = n > 10 ? 3 : n > 6 ? 2 : 1;
+  const xlbls = points.map((p,i) => {
+    if (i % step !== 0 && i !== n-1) return '';
+    return `<text x="${f(sx(i))}" y="${f(pad.t+ch+16)}" text-anchor="middle" fill="var(--text-3)" font-size="8">${p.label}</text>`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${VW} ${VH}" style="width:100%;height:auto;overflow:visible" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${lineColor}" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="${lineColor}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${refs}
+    ${showFill ? `<path d="${areaD}" fill="url(#${uid})"/>` : ''}
+    <path d="${pathD}" stroke="${lineColor}" stroke-width="2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    ${xlbls}
+  </svg>`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// METRIC DETAIL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+let detailMetric = null;
+
+function showMetric(qid) {
+  detailMetric = qid;
+  document.getElementById('main').innerHTML = renderMetricDetail(qid);
+  document.getElementById('nav').innerHTML = renderNav();
+}
+function hideMetric() {
+  detailMetric = null;
+  render();
+}
+
+function renderMetricDetail(qid) {
+  const q = QUESTIONS.find(x => x.id === qid);
+  const last7 = getLastN(7);
+  const rag = getRAG(qid, last7);
+  const c = last7.filter(e => isCompliant(qid, e[qid]) === true).length;
+  const isEx = qid === 'exercise';
+
+  const trend = rollingMetric(qid, 14);
+  const chartPoints = trend.map(p => ({ y: p.count, label: dayLabel(p.date) }));
+
+  const metricColorFn = y => {
+    if (isEx) return y >= 4 ? 'var(--g)' : y >= 3 ? 'var(--a)' : 'var(--r)';
+    return y >= 6 ? 'var(--g)' : y >= 5 ? 'var(--a)' : 'var(--r)';
+  };
+  const refLines = isEx
+    ? [{ y:4, color:'var(--g)' }, { y:3, color:'var(--a)' }]
+    : [{ y:6, color:'var(--g)' }, { y:5, color:'var(--a)' }];
+
+  const chart = svgLineChart({ points: chartPoints, maxY: 7, minY: 0, refLines, colorFn: metricColorFn });
+  const ragLabels = { g:'Green', a:'Amber', r:'Red' };
+
+  return `
+    <button class="back-btn" onclick="hideMetric()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+      Dashboard
+    </button>
+    <div class="det-title">${q.label}</div>
+    ${q.detail ? `<div class="det-sub">${q.detail}</div>` : '<div style="margin-bottom:12px"></div>'}
+    <div class="det-stat rag-${rag||'x'}">
+      <span class="rag-dot" style="width:9px;height:9px;border-radius:50%;background:var(--${rag==='g'?'g':rag==='a'?'a':'r'});flex-shrink:0"></span>
+      ${ragLabels[rag]||'—'} &nbsp;·&nbsp; ${c} of ${last7.length} days compliant
+    </div>
+    <div class="card">
+      <div class="sec-hdr" style="margin-top:0">7-day rolling compliance (last 14 entries)</div>
+      <div class="chart-wrap">${chart}</div>
+    </div>`;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// VIEWS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function renderNav() {
+  const tabs = [
+    { id:'dashboard', icon:ICONS.dashboard, label:'Dashboard' },
+    { id:'checkin',   icon:ICONS.checkin,   label:'Check In'  },
+    { id:'history',   icon:ICONS.history,   label:'History'   },
+    { id:'alerts',    icon:ICONS.alerts,    label:'Alerts'    },
+    { id:'settings',  icon:ICONS.settings,  label:'Settings'  },
+  ];
+  return tabs.map(t =>
+    `<button class="nav-btn ${view===t.id?'active':''}" onclick="navigate('${t.id}')">
+       ${t.icon}<span class="nav-lbl">${t.label}</span>
+     </button>`
+  ).join('');
+}
+
+function renderDashboard() {
+  const today = todayStr();
+  const todayEntry = getEntryForDate(today);
+  const entries = getLastN(7);
+
+  const todayBar = `
+    <div class="today-bar">
+      <div>
+        <div class="today-sub">Today</div>
+        <div class="today-date">${fmtDate(today)}</div>
+        <div class="today-period">${fmtPeriodShort(today)}</div>
+      </div>
+      ${todayEntry
+        ? `<div class="ok-badge">${ICONS.checkmark} Logged</div>`
+        : `<button class="ci-btn" onclick="navigate('checkin')">Check In</button>`}
+    </div>`;
+
+  if (!entries.length) {
+    return todayBar + `<div class="empty"><div class="ei">📊</div><div class="et">Complete your first check-in to see your dashboard.</div></div>`;
+  }
+
+  // ── Aggregate card ──
+  const aggScore   = calcAggregateScore(entries);
+  const aggMax     = QUESTIONS.length * entries.length;
+  const aggRag     = getAggregateRAG(aggScore);
+  const aggTrend   = rollingAggregates(14);
+  const aggColorFn = y => y >= 52 ? 'var(--g)' : y >= 43 ? 'var(--a)' : 'var(--r)';
+  const aggChart   = svgLineChart({
+    points: aggTrend.map(p => ({ y: p.score, label: dayLabel(p.date) })),
+    maxY: 63, minY: 0,
+    refLines: [{ y:52, color:'var(--g)' }, { y:43, color:'var(--a)' }],
+    colorFn: aggColorFn,
+  });
+  const ragWord = { g:'Green', a:'Amber', r:'Red' };
+  const aggTip = 'Green >= 52 · Amber >= 43 · Red < 43 (out of 63 max). Exercise target: 4/7 days.';
+  const aggCard = `<div class="agg-card">
+    <div class="agg-top">
+      <div class="agg-label">7-Day Score <button class="tip-btn" onclick="showTip(this, '${aggTip}')">?</button></div>
+      <span class="agg-rag rag-${aggRag}">${ragWord[aggRag]}</span>
+    </div>
+    <div class="agg-num">
+      <span class="agg-score">${aggScore}</span>
+      <span class="agg-max">/ ${aggMax}</span>
+    </div>
+    <div class="chart-wrap">${aggChart}</div>
+  </div>`;
+
+  // ── Individual RAG rows (clickable) ──
+  const n = entries.length;
+  const rows = GROUPS.map(g => {
+    const qs = QUESTIONS.filter(q => q.group === g.key);
+    return `<div class="sec-hdr">${g.label}</div>` + qs.map(q => {
+      const rag = getRAG(q.id, entries);
+      const c = entries.filter(e => isCompliant(q.id, e[q.id]) === true).length;
+      const tipBtn = q.detail
+        ? ` <button class="tip-btn" onclick="showTip(this, '${q.detail}')">?</button>`
+        : '';
+      return `<div class="rag-row rag-${rag||'x'} clickable" onclick="showMetric('${q.id}')">
+        <span class="rag-dot"></span>
+        <span class="rag-name">${q.label}${tipBtn}</span>
+        <span class="rag-score">${c}/${n}</span>
+        <span class="rag-chev">›</span>
+      </div>`;
+    }).join('');
+  }).join('');
+
+  return todayBar + aggCard + `<div class="card">${rows}</div>`;
+}
+
+function renderCheckIn() {
+  const today = todayStr();
+  const existing = getEntryForDate(today);
+  const answered = QUESTIONS.filter(q => ciAnswers[q.id] !== undefined && ciAnswers[q.id] !== null).length;
+  const allAnswered = answered === QUESTIONS.length;
+
+  if (ciSubmitted) return `<div class="success-bar" style="margin-top:8px">Saved — great work today.</div>`;
+
+  const alreadyNote = existing
+    ? `<div class="already-banner">Already logged today — answers pre-filled. Resubmit to update.</div>`
+    : '';
+
+  const period = `<div class="ci-period">${fmtPeriod(today)}</div>`;
+
+  const sections = GROUPS.map(g => {
+    const qs = QUESTIONS.filter(q => q.group === g.key);
+    const rows = qs.map(q => {
+      const val = ciAnswers[q.id];
+      const isZero = ZERO_IDS.has(q.id);
+      const isEx = q.id === 'exercise';
+      let yc = '', nc = '';
+      if (val === true)  { yc = isZero ? 'sb' : 'sg'; }
+      if (val === false) { nc = isZero ? 'sg' : (isEx ? 'sn' : 'sb'); }
+      const tipBtn = q.detail
+        ? `<button class="tip-btn" onclick="showTip(this, '${q.detail}')">?</button>`
+        : '';
+      return `<div class="ci-row">
+        <span class="ci-q">${q.label}${tipBtn}</span>
+        <div class="ci-btns">
+          <button class="ci-tog ${nc}" onclick="setAnswer('${q.id}',false)">${q.noLabel}</button>
+          <button class="ci-tog ${yc}" onclick="setAnswer('${q.id}',true)">${q.yesLabel}</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="ci-sec-hdr">${g.label}</div>${rows}`;
+  }).join('');
+
+  const isUpdate = !!existing;
+  const submitLabel = allAnswered
+    ? (isUpdate ? 'Update Check-In' : 'Save Check-In')
+    : `${answered} of ${QUESTIONS.length} answered`;
+
+  const submitBtn = `<button class="sub-btn" ${!allAnswered ? 'disabled' : ''} onclick="submitCheckIn()" style="margin-top:10px">${submitLabel}</button>`;
+
+  return alreadyNote + period + sections + submitBtn;
+}
+
+function renderHistory() {
+  const entries = loadEntries();
+  if (!entries.length) {
+    return `<div class="empty"><div class="ei">📋</div><div class="et">No entries yet.</div></div>`;
+  }
+  return entries.map(entry => {
+    const c = QUESTIONS.filter(q => isCompliant(q.id, entry[q.id]) === true).length;
+    const pct = Math.round((c / QUESTIONS.length) * 100);
+    const sc = pct >= 85 ? 'hs-g' : pct >= 70 ? 'hs-a' : 'hs-r';
+    const tags = QUESTIONS.map(q => {
+      const v = isCompliant(q.id, entry[q.id]);
+      const tc = v === null ? 'ht-n' : v ? 'ht-g' : 'ht-b';
+      const lbl = q.label.length > 10 ? q.label.slice(0,10)+'…' : q.label;
+      return `<span class="h-tag ${tc}">${lbl}</span>`;
+    }).join('');
+    return `<div class="hist-card">
+      <div class="hist-top">
+        <div class="hist-date">${fmtDate(entry.date)}</div>
+        <div class="hist-score ${sc}">${c}/${QUESTIONS.length} · ${pct}%</div>
+      </div>
+      <div class="hist-tags">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAlerts() {
+  const perm = notifState();
+  const alerts = loadAlerts();
+  let statusHtml = '';
+  if (perm === 'granted') {
+    statusHtml = `<div class="notif-status ns-on">Alerts enabled — keep this page open for reminders to fire.</div>`;
+  } else if (perm === 'denied') {
+    statusHtml = `<div class="notif-status ns-off">Alerts blocked. Allow notifications in your browser settings, then reload.</div>`;
+  } else if (perm === 'default') {
+    statusHtml = `<div class="notif-status ns-unk">Alerts not yet enabled.</div>
+      <button class="en-btn" onclick="requestNotif()">Enable Alerts</button>`;
+  } else {
+    statusHtml = `<div class="notif-status ns-unk">Notifications not supported in this browser.</div>`;
+  }
+
+  const scheduleRows = alerts.map((a, i) => {
+    const t = `${String(a.hh).padStart(2,'0')}:${String(a.mm).padStart(2,'0')}`;
+    return `<div class="alert-row">
+      <label class="sw-wrap">
+        <input class="sw-inp" type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAlert(${i})">
+        <span class="sw-sldr"></span>
+      </label>
+      <input class="al-time-input" type="time" value="${t}" onchange="updateAlertTime(${i}, this.value)" ${!a.enabled ? 'disabled' : ''}>
+      <div class="al-msg${a.enabled ? '' : ' disabled'}">${a.body}</div>
+    </div>`;
+  }).join('');
+
+  return `
+    ${statusHtml}
+    <div class="card" style="margin-top:${perm === 'default' ? '8px' : '4px'}">
+      <div class="sec-hdr" style="margin-top:0">Daily schedule</div>
+      ${scheduleRows}
+    </div>
+    <div class="card info-card">
+      <strong>How it works</strong><br>
+      Alerts use your browser's notification system and fire while this page is open.
+      On Mac, keep the browser running in the background. On iPhone, use Safari's Share menu
+      to add this page to your Home Screen — then open it each morning.
+    </div>`;
+}
+
+function renderSettings() {
+  const { id, token } = getGistConfig();
+  const configured = !!(id && token);
+  const syncStatus = configured
+    ? `<div class="notif-status ns-on">Sync configured — data syncs across devices via GitHub Gist.</div>`
+    : `<div class="notif-status ns-unk">Sync not configured — enter your Gist ID and token below.</div>`;
+  return `
+    ${syncStatus}
+    <div class="card" style="margin-top:8px">
+      <div class="sec-hdr" style="margin-top:0">GitHub Gist Sync</div>
+      <div class="sett-row">
+        <label class="sett-lbl">Gist ID</label>
+        <input class="sett-inp" id="inp-gist-id" type="text" placeholder="e.g. 7dca3186d89466acb89dc6d7f843b427" value="${id}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="sett-row" style="margin-top:10px">
+        <label class="sett-lbl">Personal Access Token</label>
+        <input class="sett-inp" id="inp-gist-token" type="password" placeholder="ghp_…" value="${token}" autocomplete="off">
+      </div>
+      <button class="en-btn" style="margin-top:14px" onclick="saveGistConfig()">Save &amp; Sync</button>
+      ${configured ? `<button class="sett-clear-btn" onclick="clearGistConfig()">Disconnect</button>` : ''}
+    </div>
+    <div class="card info-card">
+      <strong>How to get your Gist ID &amp; token</strong><br>
+      1. Go to <strong>gist.github.com</strong> and open your health-tracker-data.json Gist.<br>
+      2. Copy the ID from the URL (the long string after your username).<br>
+      3. Go to <strong>github.com → Settings → Developer settings → Personal access tokens</strong> and create a token with <strong>gist</strong> scope.<br>
+      4. Paste both above and tap Save &amp; Sync.
+    </div>`;
+}
+
+function saveGistConfig() {
+  const id    = document.getElementById('inp-gist-id').value.trim();
+  const token = document.getElementById('inp-gist-token').value.trim();
+  if (!id || !token) return;
+  localStorage.setItem('ht_gist_id', id);
+  localStorage.setItem('ht_gist_token', token);
+  render();
+  loadFromGist();
+}
+
+function clearGistConfig() {
+  localStorage.removeItem('ht_gist_id');
+  localStorage.removeItem('ht_gist_token');
+  render();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ACTIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function navigate(v) {
+  view = v;
+  detailMetric = null;
+  if (v === 'checkin') {
+    ciSubmitted = false;
+    const existing = getEntryForDate(todayStr());
+    ciAnswers = existing ? { ...existing } : {};
+  }
+  render();
+}
+
+function setAnswer(qid, val) {
+  ciAnswers[qid] = val;
+  document.getElementById('main').innerHTML = renderCheckIn();
+}
+
+function submitCheckIn() {
+  const entry = { date: todayStr() };
+  QUESTIONS.forEach(q => { entry[q.id] = ciAnswers[q.id] ?? null; });
+  saveEntry(entry);
+  ciSubmitted = true;
+  render();
+  setTimeout(() => { view = 'dashboard'; render(); }, 1600);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// RENDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const VIEWS = { dashboard:renderDashboard, checkin:renderCheckIn, history:renderHistory, alerts:renderAlerts, settings:renderSettings };
+
+function render() {
+  const todayEntry = getEntryForDate(todayStr());
+  document.getElementById('hdr-badge').innerHTML = todayEntry
+    ? `<span class="badge badge-ok">Logged</span>`
+    : `<span class="badge badge-warn">Log due</span>`;
+  document.getElementById('main').innerHTML = VIEWS[view]();
+  document.getElementById('nav').innerHTML = renderNav();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INIT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+applyTheme();
+updateBanner();
+scheduleNotifications();
+render();        // show local data immediately
+loadFromGist();  // sync from Gist in background, re-renders when done (no-op if not configured)
+</script>
+</body>
+</html>
