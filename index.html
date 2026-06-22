@@ -144,6 +144,25 @@
       transition: background 0.15s;
     }
     .theme-btn:active { background: rgba(255,255,255,0.15); }
+    .theme-toggle {
+      display: flex; align-items: center;
+      background: var(--surface-hi); border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 3px; gap: 0; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; position: relative;
+    }
+    .theme-toggle-opt {
+      width: 26px; height: 26px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-3); transition: color 0.2s; position: relative; z-index: 1;
+      flex-shrink: 0;
+    }
+    .theme-toggle-opt.active { color: var(--text); }
+    .theme-toggle-pill {
+      position: absolute; top: 3px; width: 26px; height: 26px;
+      border-radius: 16px; background: var(--surface);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+      transition: left 0.2s cubic-bezier(.4,0,.2,1);
+    }
     /* ━━━ NOTIF BANNER ━━━ */
     #notif-banner {
       background: var(--notif-bg);
@@ -495,9 +514,15 @@
       <span id="sync-dot" style="font-size:10px;font-weight:600;letter-spacing:0.2px;flex-shrink:0;margin-left:4px"></span>
     </div>
     <div class="hdr-right">
-      <button class="theme-btn" onclick="toggleTheme()" title="Toggle light/dark">
-        <span id="theme-icon"></span>
-      </button>
+      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark" id="theme-toggle">
+        <div class="theme-toggle-pill" id="theme-pill"></div>
+        <div class="theme-toggle-opt" id="theme-moon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </div>
+        <div class="theme-toggle-opt" id="theme-sun">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/></svg>
+        </div>
+      </div>
       <button class="theme-btn" onclick="navigate('settings')" title="Settings">
         <span id="settings-icon"></span>
       </button>
@@ -534,20 +559,6 @@ const ICONS = {
   alerts: `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
     <path d="M12 2a7 7 0 00-7 7v4.586L3.293 15.293A1 1 0 004 17h16a1 1 0 00.707-1.707L19 13.586V9a7 7 0 00-7-7z"/>
     <path d="M10.268 21a2 2 0 003.464 0H10.268z"/>
-  </svg>`,
-  sun: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="4"/>
-    <line x1="12" y1="2"  x2="12" y2="5"/>
-    <line x1="12" y1="19" x2="12" y2="22"/>
-    <line x1="2"  y1="12" x2="5"  y2="12"/>
-    <line x1="19" y1="12" x2="22" y2="12"/>
-    <line x1="4.93" y1="4.93"   x2="7.05" y2="7.05"/>
-    <line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/>
-    <line x1="4.93"  y1="19.07" x2="7.05"  y2="16.95"/>
-    <line x1="16.95" y1="7.05"  x2="19.07" y2="4.93"/>
-  </svg>`,
-  moon: `<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
   </svg>`,
   checkmark: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
     <path fill-rule="evenodd" clip-rule="evenodd" d="M19.707 6.293a1 1 0 00-1.414 0L10 14.586l-3.293-3.293a1 1 0 00-1.414 1.414l4 4a1 1 0 001.414 0l9-9a1 1 0 000-1.414z"/>
@@ -754,7 +765,10 @@ let dark = localStorage.getItem('ht_theme')
 
 function applyTheme() {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  document.getElementById('theme-icon').innerHTML = dark ? ICONS.sun : ICONS.moon;
+  // pill: left=3px on moon (dark), left=29px on sun (light)
+  document.getElementById('theme-pill').style.left = dark ? '3px' : '29px';
+  document.getElementById('theme-moon').classList.toggle('active', dark);
+  document.getElementById('theme-sun').classList.toggle('active', !dark);
   document.getElementById('settings-icon').innerHTML = ICONS.settings;
 }
 function toggleTheme() {
