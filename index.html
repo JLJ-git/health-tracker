@@ -839,6 +839,7 @@ function updateAlertTime(i, val) {
 let view = 'dashboard';
 let ciAnswers = {};
 let ciSubmitted = false;
+let editDate = null; // null = today, date string = editing past entry
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CHARTS & AGGREGATE
@@ -1067,18 +1068,23 @@ function renderDashboard() {
 }
 
 function renderCheckIn() {
-  const today = todayStr();
-  const existing = getEntryForDate(today);
+  const date = editDate || todayStr();
+  const isEditing = editDate && editDate !== todayStr();
+  const existing = getEntryForDate(date);
   const answered = QUESTIONS.filter(q => ciAnswers[q.id] !== undefined && ciAnswers[q.id] !== null).length;
   const allAnswered = answered === QUESTIONS.length;
 
-  if (ciSubmitted) return `<div class="success-bar" style="margin-top:8px">Saved — great work today.</div>`;
+  if (ciSubmitted) return `<div class="success-bar" style="margin-top:8px">${isEditing ? 'Updated.' : 'Saved — great work today.'}</div>`;
 
-  const alreadyNote = existing
+  const alreadyNote = existing && !isEditing
     ? `<div class="already-banner">Already logged today — answers pre-filled. Resubmit to update.</div>`
     : '';
 
-  const period = `<div class="ci-period">${fmtPeriod(today)}</div>`;
+  const editNote = isEditing
+    ? `<div class="already-banner">Editing ${fmtDate(date)} — update answers below.</div>`
+    : '';
+
+  const period = `<div class="ci-period">${fmtPeriod(date)}</div>`;
 
   const sections = GROUPS.map(g => {
     const qs = QUESTIONS.filter(q => q.group === g.key);
@@ -1105,12 +1111,16 @@ function renderCheckIn() {
 
   const isUpdate = !!existing;
   const submitLabel = allAnswered
-    ? (isUpdate ? 'Update Check-In' : 'Save Check-In')
+    ? (isEditing || isUpdate ? 'Update Check-In' : 'Save Check-In')
     : `${answered} of ${QUESTIONS.length} answered`;
+
+  const backBtn = isEditing
+    ? `<button class="back-btn" onclick="navigate('history')">‹ History</button>`
+    : '';
 
   const submitBtn = `<button class="sub-btn" ${!allAnswered ? 'disabled' : ''} onclick="submitCheckIn()" style="margin-top:10px">${submitLabel}</button>`;
 
-  return alreadyNote + period + sections + submitBtn;
+  return backBtn + editNote + alreadyNote + period + sections + submitBtn;
 }
 
 function renderHistory() {
@@ -1128,10 +1138,13 @@ function renderHistory() {
       const lbl = q.label.length > 10 ? q.label.slice(0,10)+'…' : q.label;
       return `<span class="h-tag ${tc}">${lbl}</span>`;
     }).join('');
-    return `<div class="hist-card">
+    return `<div class="hist-card" onclick="editEntry('${entry.date}')" style="cursor:pointer">
       <div class="hist-top">
         <div class="hist-date">${fmtDate(entry.date)}</div>
-        <div class="hist-score ${sc}">${c}/${QUESTIONS.length} · ${pct}%</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="hist-score ${sc}">${c}/${QUESTIONS.length} · ${pct}%</div>
+          <span style="color:var(--text-3);font-size:16px;line-height:1">›</span>
+        </div>
       </div>
       <div class="hist-tags">${tags}</div>
     </div>`;
@@ -1232,6 +1245,7 @@ function navigate(v) {
   view = v;
   detailMetric = null;
   if (v === 'checkin') {
+    editDate = null;
     ciSubmitted = false;
     const existing = getEntryForDate(todayStr());
     ciAnswers = existing ? { ...existing } : {};
@@ -1245,12 +1259,23 @@ function setAnswer(qid, val) {
 }
 
 function submitCheckIn() {
-  const entry = { date: todayStr() };
+  const date = editDate || todayStr();
+  const returnTo = editDate && editDate !== todayStr() ? 'history' : 'dashboard';
+  const entry = { date };
   QUESTIONS.forEach(q => { entry[q.id] = ciAnswers[q.id] ?? null; });
   saveEntry(entry);
   ciSubmitted = true;
   render();
-  setTimeout(() => { view = 'dashboard'; render(); }, 1600);
+  setTimeout(() => { editDate = null; view = returnTo; render(); }, 1200);
+}
+
+function editEntry(date) {
+  editDate = date;
+  ciSubmitted = false;
+  view = 'checkin';
+  const existing = getEntryForDate(date);
+  ciAnswers = existing ? { ...existing } : {};
+  render();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
