@@ -132,8 +132,7 @@
     .hdr-left { display: flex; align-items: center; gap: 10px; }
     .hdr-logo {
       width: 28px; height: 28px; border-radius: 7px;
-      background: var(--accent); display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
+      overflow: hidden; flex-shrink: 0;
     }
     .hdr-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: #F4F4F5; }
     .hdr-right { display: flex; align-items: center; gap: 8px; }
@@ -507,9 +506,7 @@
   <header id="header">
     <div class="hdr-left">
       <div class="hdr-logo">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent-text)" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.707 7.293a1 1 0 00-1.414 0L11 13.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l5-5a1 1 0 000-1.414z"/>
-        </svg>
+        <img src="icon.png" width="28" height="28" alt="">
       </div>
       <div class="hdr-title">Health Tracker</div>
       <span id="sync-dot" style="font-size:10px;font-weight:600;letter-spacing:0.2px;flex-shrink:0;margin-left:4px"></span>
