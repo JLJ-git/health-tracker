@@ -406,24 +406,6 @@
     .al-msg.disabled { color: var(--text-3); }
 
     /* iOS-style toggle switch */
-    .sw-wrap {
-      position: relative; width: 42px; height: 25px; flex-shrink: 0; cursor: pointer;
-    }
-    .sw-inp {
-      opacity: 0; width: 0; height: 0; position: absolute;
-    }
-    .sw-sldr {
-      position: absolute; inset: 0; border-radius: 13px;
-      background: var(--border-hi); transition: background 0.2s;
-    }
-    .sw-sldr::before {
-      content: ''; position: absolute;
-      width: 19px; height: 19px; border-radius: 50%;
-      left: 3px; top: 3px; background: #fff;
-      transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    }
-    .sw-inp:checked + .sw-sldr { background: var(--accent); }
-    .sw-inp:checked + .sw-sldr::before { transform: translateX(17px); }
 
     .notif-status {
       display: flex; align-items: center; gap: 8px;
@@ -528,7 +510,7 @@
   </header>
   <div id="notif-banner">
     <span class="nb-text">Enable daily alerts for reminders</span>
-    <button class="nb-btn" onclick="requestNotif()">Enable</button>
+    <button class="nb-btn" onclick="subscribePush()">Enable</button>
   </div>
   <main id="main"></main>
   <nav id="nav"></nav>
@@ -584,12 +566,12 @@ const GROUPS = [
   { key:'exercise', label:'Exercise',       sub:'Did you work out today?'     },
 ];
 
-const DEFAULT_ALERTS = [
-  { hh:12, mm:0,  title:'Health Tracker',  body:'Break your fast, update your tracker and eat lunch', enabled:true },
-  { hh:18, mm:0,  title:'Dinner Time',     body:'Time to eat dinner',                                  enabled:true },
-  { hh:20, mm:0,  title:'Start Fasting',   body:'Nothing except water after this point',               enabled:true },
-  { hh:20, mm:30, title:'Bed Time',        body:'Time to head to bed',                                 enabled:true },
-  { hh:21, mm:0,  title:'Lights Out',      body:'Sleep time — lights out',                             enabled:true },
+const SCHEDULE = [
+  { hh:12, mm:0,  title:'Health Tracker', body:'Break your fast, update your tracker and eat lunch' },
+  { hh:18, mm:0,  title:'Dinner Time',    body:'Time to eat dinner'                                  },
+  { hh:20, mm:0,  title:'Start Fasting',  body:'Nothing except water after this point'              },
+  { hh:20, mm:30, title:'Bed Time',       body:'Time to head to bed'                                },
+  { hh:21, mm:0,  title:'Lights Out',     body:'Sleep time — lights out'                            },
 ];
 
 const ZERO_IDS = new Set(['sweets','carbs','redMeat','dairy','caffeine','alcohol']);
@@ -684,16 +666,6 @@ function saveEntry(entry) {
 function getEntryForDate(date) { return loadEntries().find(e => e.date === date) || null; }
 function getLastN(n) { return loadEntries().slice(0, n); }
 
-function loadAlerts() {
-  try {
-    const stored = JSON.parse(localStorage.getItem('ht_alerts'));
-    if (stored && Array.isArray(stored) && stored.length === DEFAULT_ALERTS.length) return stored;
-  } catch {}
-  return DEFAULT_ALERTS.map(a => ({ ...a }));
-}
-function saveAlerts(alerts) {
-  localStorage.setItem('ht_alerts', JSON.stringify(alerts));
-}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UTILITIES
@@ -773,62 +745,74 @@ function toggleTheme() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// NOTIFICATIONS
+// WEB PUSH
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let notifTimeouts = [];
+const VAPID_PUBLIC_KEY = 'BL2PDjupvOMKddhLvS7m-1H6qErHpazSPsaAVurRhWy2_EH7eqGE0N8kpttcr0TOM4N4Hhjsy1c2DrV34BQVKPk';
 
-function clearNotifTimeouts() {
-  notifTimeouts.forEach(clearTimeout);
-  notifTimeouts = [];
+function pushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
-function scheduleNotifications() {
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  clearNotifTimeouts();
-  const now = new Date();
-  loadAlerts().filter(a => a.enabled).forEach(({ hh, mm, title, body }) => {
-    const t = new Date(); t.setHours(hh, mm, 0, 0);
-    const ms = t - now;
-    if (ms > 0) {
-      const tid = setTimeout(() => { try { new Notification(title, { body, tag:`ht-${hh}-${mm}` }); } catch {} }, ms);
-      notifTimeouts.push(tid);
-    }
+function urlBase64ToUint8Array(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+
+async function getPushSubscription() {
+  if (!pushSupported()) return null;
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+async function savePushSubscriptionToGist(sub) {
+  if (!gistConfigured()) return;
+  const { id, token } = getGistConfig();
+  const res  = await fetch(`https://api.github.com/gists/${id}`, {
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  const data = await res.json();
+  let subs = [];
+  try { subs = JSON.parse(data.files['push-subscriptions.json']?.content || '[]'); } catch {}
+  subs = subs.filter(s => s.endpoint !== sub.endpoint);
+  subs.push(sub);
+  await fetch(`https://api.github.com/gists/${id}`, {
+    method: 'PATCH',
+    headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+    body: JSON.stringify({ files: { 'push-subscriptions.json': { content: JSON.stringify(subs) } } })
   });
 }
-function requestNotif() {
-  if (typeof Notification === 'undefined') return;
-  Notification.requestPermission().then(p => {
-    updateBanner();
-    if (p === 'granted') scheduleNotifications();
-    if (view === 'alerts') render();
-  });
-}
-function notifState() {
-  if (typeof Notification === 'undefined') return 'unsupported';
-  return Notification.permission;
-}
-function updateBanner() {
-  const hasEnabled = loadAlerts().some(a => a.enabled);
-  const show = notifState() === 'default' && hasEnabled;
-  document.getElementById('notif-banner').style.display = show ? 'flex' : 'none';
-}
 
-function toggleAlert(i) {
-  const alerts = loadAlerts();
-  alerts[i].enabled = !alerts[i].enabled;
-  saveAlerts(alerts);
-  scheduleNotifications();
-  document.getElementById('main').innerHTML = renderAlerts();
-}
+async function subscribePush() {
+  if (!pushSupported()) { alert('Push notifications are not supported in this browser. Add the app to your Home Screen first.'); return; }
+  if (!gistConfigured()) { alert('Go to Settings and enter your Gist ID and token first so the subscription can be saved.'); return; }
 
-function updateAlertTime(i, val) {
-  const alerts = loadAlerts();
-  const parts = val.split(':').map(Number);
-  if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-    alerts[i].hh = parts[0]; alerts[i].mm = parts[1];
-    saveAlerts(alerts);
-    scheduleNotifications();
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { updateBanner(); render(); return; }
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+    localStorage.setItem('ht_push_enabled', 'true');
+    await savePushSubscriptionToGist(sub.toJSON());
+  } catch (err) {
+    console.error('Push subscribe failed:', err);
   }
+  updateBanner();
+  render();
+}
+
+async function unsubscribePush() {
+  const sub = await getPushSubscription();
+  if (sub) await sub.unsubscribe();
+  localStorage.removeItem('ht_push_enabled');
+  updateBanner();
+  render();
+}
+
+function updateBanner() {
+  const enabled = localStorage.getItem('ht_push_enabled') === 'true';
+  document.getElementById('notif-banner').style.display = enabled ? 'none' : 'flex';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1150,43 +1134,38 @@ function renderHistory() {
 }
 
 function renderAlerts() {
-  const perm = notifState();
-  const alerts = loadAlerts();
-  let statusHtml = '';
-  if (perm === 'granted') {
-    statusHtml = `<div class="notif-status ns-on">Alerts enabled — keep this page open for reminders to fire.</div>`;
-  } else if (perm === 'denied') {
-    statusHtml = `<div class="notif-status ns-off">Alerts blocked. Allow notifications in your browser settings, then reload.</div>`;
-  } else if (perm === 'default') {
-    statusHtml = `<div class="notif-status ns-unk">Alerts not yet enabled.</div>
-      <button class="en-btn" onclick="requestNotif()">Enable Alerts</button>`;
+  const enabled = localStorage.getItem('ht_push_enabled') === 'true';
+  const denied  = typeof Notification !== 'undefined' && Notification.permission === 'denied';
+
+  let statusHtml;
+  if (denied) {
+    statusHtml = `<div class="notif-status ns-off">Notifications blocked — allow them in your device settings, then reload.</div>`;
+  } else if (enabled) {
+    statusHtml = `<div class="notif-status ns-on">Push alerts active — notifications will arrive even when the app is closed.</div>
+      <button class="sett-clear-btn" style="margin-bottom:8px" onclick="unsubscribePush()">Disable Alerts</button>`;
   } else {
-    statusHtml = `<div class="notif-status ns-unk">Notifications not supported in this browser.</div>`;
+    statusHtml = `<div class="notif-status ns-unk">Push alerts not yet enabled.</div>
+      <button class="en-btn" onclick="subscribePush()">Enable Alerts</button>`;
   }
 
-  const scheduleRows = alerts.map((a, i) => {
+  const scheduleRows = SCHEDULE.map(a => {
     const t = `${String(a.hh).padStart(2,'0')}:${String(a.mm).padStart(2,'0')}`;
     return `<div class="alert-row">
-      <label class="sw-wrap">
-        <input class="sw-inp" type="checkbox" ${a.enabled ? 'checked' : ''} onchange="toggleAlert(${i})">
-        <span class="sw-sldr"></span>
-      </label>
-      <input class="al-time-input" type="time" value="${t}" onchange="updateAlertTime(${i}, this.value)" ${!a.enabled ? 'disabled' : ''}>
-      <div class="al-msg${a.enabled ? '' : ' disabled'}">${a.body}</div>
+      <span class="al-time-input" style="cursor:default;color:var(--accent)">${t}</span>
+      <div class="al-msg">${a.body}</div>
     </div>`;
   }).join('');
 
   return `
     ${statusHtml}
-    <div class="card" style="margin-top:${perm === 'default' ? '8px' : '4px'}">
+    <div class="card" style="margin-top:8px">
       <div class="sec-hdr" style="margin-top:0">Daily schedule</div>
       ${scheduleRows}
     </div>
     <div class="card info-card">
       <strong>How it works</strong><br>
-      Alerts use your browser's notification system and fire while this page is open.
-      On Mac, keep the browser running in the background. On iPhone, use Safari's Share menu
-      to add this page to your Home Screen — then open it each morning.
+      Alerts are sent via Web Push — they arrive as native notifications even when the app is closed.
+      On iPhone, make sure the app is added to your Home Screen before enabling.
     </div>`;
 }
 
@@ -1290,11 +1269,14 @@ function render() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/health-tracker/sw.js').catch(err => console.warn('SW:', err));
+}
+
 applyTheme();
 updateBanner();
-scheduleNotifications();
-render();        // show local data immediately
-loadFromGist();  // sync from Gist in background, re-renders when done (no-op if not configured)
+render();
+loadFromGist();
 </script>
 </body>
 </html>

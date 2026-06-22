@@ -1,0 +1,35 @@
+name: Push Notifications
+
+on:
+  schedule:
+    # 12:00 London (11:00 UTC in BST, 12:00 UTC in GMT)
+    - cron: '0 11 * * *'
+    - cron: '0 12 * * *'
+    # 18:00 London
+    - cron: '0 17 * * *'
+    - cron: '0 18 * * *'
+    # 20:00 London
+    - cron: '0 19 * * *'
+    - cron: '0 20 * * *'
+    # 20:30 London
+    - cron: '30 19 * * *'
+    - cron: '30 20 * * *'
+    # 21:00 London
+    - cron: '0 21 * * *'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install web-push --no-save
+      - name: Send push notifications
+        env:
+          VAPID_PUBLIC_KEY:  ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          GIST_TOKEN:        ${{ secrets.GIST_TOKEN }}
+          GIST_ID:           ${{ secrets.GIST_ID }}
+        run: node send-push.js
