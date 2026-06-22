@@ -508,7 +508,6 @@
       <button class="theme-btn" onclick="navigate('settings')" title="Settings">
         <span id="settings-icon"></span>
       </button>
-      <div id="hdr-badge"></div>
     </div>
   </header>
   <div id="notif-banner">
@@ -1255,9 +1254,6 @@ const VIEWS = { dashboard:renderDashboard, checkin:renderCheckIn, history:render
 
 function render() {
   const todayEntry = getEntryForDate(todayStr());
-  document.getElementById('hdr-badge').innerHTML = todayEntry
-    ? `<span class="badge badge-ok">Logged</span>`
-    : `<span class="badge badge-warn">Log due</span>`;
   document.getElementById('main').innerHTML = VIEWS[view]();
   document.getElementById('nav').innerHTML = renderNav();
 }
