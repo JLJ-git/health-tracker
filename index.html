@@ -1187,8 +1187,11 @@ function renderCheckIn() {
 
   const canSubmit = allAnswered && lockedCount === 0;
   const submitBtn = `<button class="sub-btn" ${!canSubmit ? 'disabled' : ''} onclick="submitCheckIn()" style="margin-top:10px">${submitLabel}</button>`;
+  const deleteBtn = isEditing
+    ? `<button class="sett-clear-btn" style="margin-top:6px;color:var(--r)" onclick="deleteEntry('${date}')">Delete this entry</button>`
+    : '';
 
-  return backBtn + editNote + alreadyNote + period + sections + submitBtn;
+  return backBtn + editNote + alreadyNote + period + sections + submitBtn + deleteBtn;
 }
 
 function renderHistory() {
@@ -1369,6 +1372,16 @@ function editEntry(date) {
   view = 'checkin';
   const existing = getEntryForDate(date);
   ciAnswers = existing ? { ...existing } : {};
+  render();
+}
+
+function deleteEntry(date) {
+  if (!confirm(`Delete entry for ${fmtDate(date)}?`)) return;
+  const entries = loadEntries().filter(e => e.date !== date);
+  localStorage.setItem(KEY, JSON.stringify(entries));
+  saveToGist(entries);
+  editDate = null;
+  view = 'history';
   render();
 }
 
