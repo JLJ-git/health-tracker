@@ -613,7 +613,29 @@ async function loadFromGist() {
     const data = await res.json();
     const content = data.files[GIST_FILE]?.content;
     if (content) {
-      const gistEntries = JSON.parse(content);
+      let gistEntries = JSON.parse(content);
+
+      // One-time: migrate Gist entries to new date convention (date = day activities happened)
+      if (!localStorage.getItem('ht_gist_migrated_v2')) {
+        const migrated = gistEntries.map(e => {
+          const d = new Date(e.date + 'T12:00:00');
+          d.setDate(d.getDate() - 1);
+          return { ...e, date: localDateStr(d) };
+        });
+        const originalDates  = new Set(gistEntries.map(e => e.date));
+        const migratedDates  = new Set(migrated.map(e => e.date));
+        const localEntries   = loadEntries();
+        // Exclude local entries that were previously loaded from Gist (now contaminated)
+        const trueLocalOnly  = localEntries.filter(e => !migratedDates.has(e.date) && !originalDates.has(e.date));
+        const merged = [...migrated, ...trueLocalOnly].sort((a,b) => b.date.localeCompare(a.date));
+        localStorage.setItem(KEY, JSON.stringify(merged));
+        localStorage.setItem('ht_gist_migrated_v2', '1');
+        await saveToGist(merged);
+        setSyncStatus('synced');
+        render();
+        return;
+      }
+
       const localEntries = loadEntries();
       const gistDates = new Set(gistEntries.map(e => e.date));
       const localOnly = localEntries.filter(e => !gistDates.has(e.date));
