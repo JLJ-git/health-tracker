@@ -368,6 +368,8 @@
     .ci-tog.sg { background: var(--sel-good);    border-color: var(--sel-good);    color: var(--sel-good-text);    }
     .ci-tog.sb { background: var(--sel-bad);     border-color: var(--sel-bad);     color: var(--sel-bad-text);     }
     .ci-tog.sn { background: var(--sel-neutral); border-color: var(--sel-neutral); color: var(--sel-neutral-text); }
+    .ci-row-locked { opacity: 0.45; pointer-events: none; }
+    .ci-lock { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); flex-shrink: 0; }
 
     /* ━━━ HISTORY ━━━ */
     .hist-card {
@@ -671,22 +673,55 @@ function getLastN(n) { return loadEntries().slice(0, n); }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UTILITIES
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function todayStr() { return new Date().toISOString().split('T')[0]; }
+function localDateStr(d) {
+  // Format a Date as YYYY-MM-DD in local time (avoids UTC midnight issues in BST)
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+function todayStr() { return localDateStr(new Date()); }
+function logDate()  {
+  // Entries are stored as the date the activities happened (yesterday relative to check-in)
+  const d = new Date(); d.setDate(d.getDate() - 1); return localDateStr(d);
+}
 
 function fmtDate(str) {
   return new Date(str + 'T12:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
 }
 function fmtPeriod(str) {
+  // Entry dated 'str' covers str 12pm → str+1 12pm
   const d = new Date(str + 'T12:00:00');
-  const p = new Date(d); p.setDate(p.getDate() - 1);
+  const n = new Date(d); n.setDate(n.getDate() + 1);
   const f = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-  return `${f(p)} 12pm → ${f(d)} 12pm`;
+  return `${f(d)} 12pm → ${f(n)} 12pm`;
 }
 function fmtPeriodShort(str) {
   const d = new Date(str + 'T12:00:00');
-  const p = new Date(d); p.setDate(p.getDate() - 1);
-  const wd = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-  return `${wd(p)} 12pm → ${wd(d)} 12pm`;
+  const n = new Date(d); n.setDate(n.getDate() + 1);
+  const f = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  return `${f(d)} 12pm → ${f(n)} 12pm`;
+}
+
+// ── Question lock hours (null = never locked) ──────────────────────────
+const LOCK_HOUR = {
+  sleep: 7, fast: 12,
+  sweets: 20, carbs: 20, redMeat: 20, dairy: 20, caffeine: 20, alcohol: 20,
+  exercise: null,
+};
+
+// ── Draft: persist partial check-in answers across app opens ──────────
+function saveDraft()  {
+  localStorage.setItem('ht_draft_date',    logDate());
+  localStorage.setItem('ht_draft_answers', JSON.stringify(ciAnswers));
+}
+function loadDraft()  {
+  if (localStorage.getItem('ht_draft_date') !== logDate()) return null;
+  try { return JSON.parse(localStorage.getItem('ht_draft_answers') || 'null'); } catch { return null; }
+}
+function clearDraft() {
+  localStorage.removeItem('ht_draft_date');
+  localStorage.removeItem('ht_draft_answers');
 }
 
 function isCompliant(qid, val) {
@@ -983,7 +1018,8 @@ function renderNav() {
 
 function renderDashboard() {
   const today = todayStr();
-  const todayEntry = getEntryForDate(today);
+  const logD  = logDate();          // entry date (yesterday)
+  const todayEntry = getEntryForDate(logD);
   const entries = getLastN(7);
 
   const todayBar = `
@@ -991,7 +1027,7 @@ function renderDashboard() {
       <div>
         <div class="today-sub">Today</div>
         <div class="today-date">${fmtDate(today)}</div>
-        <div class="today-period">${fmtPeriodShort(today)}</div>
+        <div class="today-period">${fmtPeriodShort(logD)}</div>
       </div>
       ${todayEntry
         ? `<div class="ok-badge">${ICONS.checkmark} Logged</div>`
@@ -1051,16 +1087,23 @@ function renderDashboard() {
 }
 
 function renderCheckIn() {
-  const date = editDate || todayStr();
-  const isEditing = editDate && editDate !== todayStr();
-  const existing = getEntryForDate(date);
-  const answered = QUESTIONS.filter(q => ciAnswers[q.id] !== undefined && ciAnswers[q.id] !== null).length;
-  const allAnswered = answered === QUESTIONS.length;
+  const isEditing = editDate !== null;           // came from history
+  const date      = isEditing ? editDate : logDate();
+  const existing  = getEntryForDate(date);
+
+  // Determine which questions are locked (only for today's check-in, not history edits)
+  const now = new Date();
+  const currentHour = now.getHours() + now.getMinutes() / 60;
+  const isQuestionLocked = q => !isEditing && LOCK_HOUR[q.id] !== null && currentHour < LOCK_HOUR[q.id];
+
+  const answered    = QUESTIONS.filter(q => !isQuestionLocked(q) && ciAnswers[q.id] !== undefined && ciAnswers[q.id] !== null).length;
+  const unlocked    = QUESTIONS.filter(q => !isQuestionLocked(q)).length;
+  const allAnswered = answered === unlocked && unlocked === QUESTIONS.length;
 
   if (ciSubmitted) return `<div class="success-bar" style="margin-top:8px">${isEditing ? 'Updated.' : 'Saved — great work today.'}</div>`;
 
   const alreadyNote = existing && !isEditing
-    ? `<div class="already-banner">Already logged today — answers pre-filled. Resubmit to update.</div>`
+    ? `<div class="already-banner">Already logged — answers pre-filled. Resubmit to update.</div>`
     : '';
 
   const editNote = isEditing
@@ -1069,18 +1112,28 @@ function renderCheckIn() {
 
   const period = `<div class="ci-period">${fmtPeriod(date)}</div>`;
 
+  const LOCK_SVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2v-9a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm3 8V7a3 3 0 10-6 0v3h6zm-3 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>`;
+
   const sections = GROUPS.map(g => {
     const qs = QUESTIONS.filter(q => q.group === g.key);
     const rows = qs.map(q => {
+      const locked = isQuestionLocked(q);
+      const tipBtn = q.detail
+        ? `<button class="tip-btn" onclick="showTip(this, '${q.detail}')">?</button>`
+        : '';
+      if (locked) {
+        const h = LOCK_HOUR[q.id];
+        return `<div class="ci-row ci-row-locked">
+          <span class="ci-q">${q.label}${tipBtn}</span>
+          <div class="ci-lock">${LOCK_SVG} After ${String(h).padStart(2,'0')}:00</div>
+        </div>`;
+      }
       const val = ciAnswers[q.id];
       const isZero = ZERO_IDS.has(q.id);
       const isEx = q.id === 'exercise';
       let yc = '', nc = '';
       if (val === true)  { yc = isZero ? 'sb' : 'sg'; }
       if (val === false) { nc = isZero ? 'sg' : (isEx ? 'sn' : 'sb'); }
-      const tipBtn = q.detail
-        ? `<button class="tip-btn" onclick="showTip(this, '${q.detail}')">?</button>`
-        : '';
       return `<div class="ci-row">
         <span class="ci-q">${q.label}${tipBtn}</span>
         <div class="ci-btns">
@@ -1093,15 +1146,22 @@ function renderCheckIn() {
   }).join('');
 
   const isUpdate = !!existing;
-  const submitLabel = allAnswered
-    ? (isEditing || isUpdate ? 'Update Check-In' : 'Save Check-In')
-    : `${answered} of ${QUESTIONS.length} answered`;
+  const lockedCount = QUESTIONS.filter(q => isQuestionLocked(q)).length;
+  let submitLabel;
+  if (lockedCount > 0 && !isEditing) {
+    submitLabel = `${lockedCount} question${lockedCount>1?'s':''} still locked`;
+  } else if (allAnswered) {
+    submitLabel = (isEditing || isUpdate) ? 'Update Check-In' : 'Save Check-In';
+  } else {
+    submitLabel = `${answered} of ${unlocked} answered`;
+  }
 
   const backBtn = isEditing
     ? `<button class="back-btn" onclick="navigate('history')">‹ History</button>`
     : '';
 
-  const submitBtn = `<button class="sub-btn" ${!allAnswered ? 'disabled' : ''} onclick="submitCheckIn()" style="margin-top:10px">${submitLabel}</button>`;
+  const canSubmit = allAnswered && lockedCount === 0;
+  const submitBtn = `<button class="sub-btn" ${!canSubmit ? 'disabled' : ''} onclick="submitCheckIn()" style="margin-top:10px">${submitLabel}</button>`;
 
   return backBtn + editNote + alreadyNote + period + sections + submitBtn;
 }
@@ -1225,23 +1285,27 @@ function navigate(v) {
   if (v === 'checkin') {
     editDate = null;
     ciSubmitted = false;
-    const existing = getEntryForDate(todayStr());
-    ciAnswers = existing ? { ...existing } : {};
+    const existing = getEntryForDate(logDate());
+    const draft    = loadDraft();
+    ciAnswers = existing ? { ...existing } : (draft || {});
   }
   render();
 }
 
 function setAnswer(qid, val) {
   ciAnswers[qid] = val;
+  if (!editDate) saveDraft();
   document.getElementById('main').innerHTML = renderCheckIn();
 }
 
 function submitCheckIn() {
-  const date = editDate || todayStr();
-  const returnTo = editDate && editDate !== todayStr() ? 'history' : 'dashboard';
+  const isEditing = editDate !== null;
+  const date      = isEditing ? editDate : logDate();
+  const returnTo  = isEditing ? 'history' : 'dashboard';
   const entry = { date };
   QUESTIONS.forEach(q => { entry[q.id] = ciAnswers[q.id] ?? null; });
   saveEntry(entry);
+  if (!isEditing) clearDraft();
   ciSubmitted = true;
   render();
   setTimeout(() => { editDate = null; view = returnTo; render(); }, 1200);
@@ -1262,7 +1326,6 @@ function editEntry(date) {
 const VIEWS = { dashboard:renderDashboard, checkin:renderCheckIn, history:renderHistory, alerts:renderAlerts, settings:renderSettings };
 
 function render() {
-  const todayEntry = getEntryForDate(todayStr());
   document.getElementById('main').innerHTML = VIEWS[view]();
   document.getElementById('nav').innerHTML = renderNav();
 }
@@ -1272,6 +1335,20 @@ function render() {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/health-tracker/sw.js').catch(err => console.warn('SW:', err));
+}
+
+// ── One-time migration: shift all existing entry dates back by 1 day ──
+if (!localStorage.getItem('ht_migrated_v2')) {
+  const raw = loadEntries();
+  if (raw.length) {
+    const shifted = raw.map(e => {
+      const d = new Date(e.date + 'T12:00:00');
+      d.setDate(d.getDate() - 1);
+      return { ...e, date: localDateStr(d) };
+    });
+    localStorage.setItem('ht_v1', JSON.stringify(shifted));
+  }
+  localStorage.setItem('ht_migrated_v2', '1');
 }
 
 applyTheme();
