@@ -637,8 +637,17 @@ async function loadFromGist() {
         return;
       }
 
-      const localEntries  = loadEntries();
-      const gistDates     = new Set(gistEntries.map(e => e.date));
+      // One-time: strip artifact entries before 2026-06-21 from Gist
+      let gistNeedsClean = false;
+      if (!localStorage.getItem('ht_gist_cleaned_v3')) {
+        const before = gistEntries.length;
+        gistEntries = gistEntries.filter(e => e.date >= '2026-06-21');
+        gistNeedsClean = gistEntries.length < before;
+        localStorage.setItem('ht_gist_cleaned_v3', '1');
+      }
+
+      const localEntries   = loadEntries();
+      const gistDates      = new Set(gistEntries.map(e => e.date));
       const latestGistDate = gistEntries.length ? gistEntries[0].date : null;
       // Only keep local-only entries newer than the latest Gist entry.
       // Older local-only entries were deleted on another device and should not be restored.
@@ -647,7 +656,7 @@ async function loadFromGist() {
       );
       const merged = [...gistEntries, ...localOnly].sort((a,b) => b.date.localeCompare(a.date));
       localStorage.setItem(KEY, JSON.stringify(merged));
-      if (localOnly.length > 0) await saveToGist(merged);
+      if (localOnly.length > 0 || gistNeedsClean) await saveToGist(merged);
     }
     setSyncStatus('synced');
     autoFillMissedDays();
@@ -1459,6 +1468,13 @@ if (!localStorage.getItem('ht_migrated_v2')) {
     localStorage.setItem('ht_v1', JSON.stringify(shifted));
   }
   localStorage.setItem('ht_migrated_v2', '1');
+}
+
+// ── One-time cleanup: remove artifact entries before 2026-06-21 ──────
+if (!localStorage.getItem('ht_cleaned_v3')) {
+  const cleaned = loadEntries().filter(e => e.date >= '2026-06-21');
+  localStorage.setItem(KEY, JSON.stringify(cleaned));
+  localStorage.setItem('ht_cleaned_v3', '1');
 }
 
 applyTheme();
