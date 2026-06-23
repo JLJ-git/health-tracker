@@ -373,6 +373,12 @@
     .ci-lock { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); flex-shrink: 0; }
 
     /* ━━━ HISTORY ━━━ */
+    .add-entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .add-entry-row input[type="date"] {
+      flex: 1; background: var(--surface); color: var(--text);
+      border: 1.5px solid var(--tog-border); border-radius: 8px;
+      padding: 7px 10px; font-size: 13px;
+    }
     .hist-card {
       background: var(--surface); border-radius: var(--radius-card);
       padding: 12px 14px; margin-bottom: 8px;
@@ -704,26 +710,22 @@ function localDateStr(d) {
   return `${y}-${m}-${dd}`;
 }
 function todayStr() { return localDateStr(new Date()); }
-function logDate()  {
-  // Entries are stored as the date the activities happened (yesterday relative to check-in)
-  const d = new Date(); d.setDate(d.getDate() - 1); return localDateStr(d);
-}
 
 function fmtDate(str) {
   return new Date(str + 'T12:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
 }
 function fmtPeriod(str) {
-  // Entry dated 'str' covers str 12pm → str+1 12pm
+  // Period for an entry dated 'str': previous day 12pm → str 12pm
   const d = new Date(str + 'T12:00:00');
-  const n = new Date(d); n.setDate(n.getDate() + 1);
+  const p = new Date(d); p.setDate(p.getDate() - 1);
   const f = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-  return `${f(d)} 12pm → ${f(n)} 12pm`;
+  return `${f(p)} 12pm → ${f(d)} 12pm`;
 }
 function fmtPeriodShort(str) {
   const d = new Date(str + 'T12:00:00');
-  const n = new Date(d); n.setDate(n.getDate() + 1);
+  const p = new Date(d); p.setDate(p.getDate() - 1);
   const f = x => x.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-  return `${f(d)} 12pm → ${f(n)} 12pm`;
+  return `${f(p)} 12pm → ${f(d)} 12pm`;
 }
 
 // ── Question lock hours (null = never locked) ──────────────────────────
@@ -735,11 +737,11 @@ const LOCK_HOUR = {
 
 // ── Draft: persist partial check-in answers across app opens ──────────
 function saveDraft()  {
-  localStorage.setItem('ht_draft_date',    logDate());
+  localStorage.setItem('ht_draft_date',    todayStr());
   localStorage.setItem('ht_draft_answers', JSON.stringify(ciAnswers));
 }
 function loadDraft()  {
-  if (localStorage.getItem('ht_draft_date') !== logDate()) return null;
+  if (localStorage.getItem('ht_draft_date') !== todayStr()) return null;
   try { return JSON.parse(localStorage.getItem('ht_draft_answers') || 'null'); } catch { return null; }
 }
 function clearDraft() {
@@ -1043,7 +1045,7 @@ function renderNav() {
 
 function renderDashboard() {
   const today = todayStr();
-  const logD  = logDate();          // entry date (yesterday)
+  const logD  = todayStr();
   const todayEntry = getEntryForDate(logD);
   const entries = getLastN(7);
 
@@ -1113,7 +1115,7 @@ function renderDashboard() {
 
 function renderCheckIn() {
   const isEditing = editDate !== null;           // came from history
-  const date      = isEditing ? editDate : logDate();
+  const date      = isEditing ? editDate : todayStr();
   const existing  = getEntryForDate(date);
 
   // Determine which questions are locked (only for today's check-in, not history edits)
@@ -1195,11 +1197,17 @@ function renderCheckIn() {
 }
 
 function renderHistory() {
+  const yesterday = localDateStr(new Date(new Date() - 86400000));
+  const addRow = `<div class="add-entry-row">
+    <input type="date" id="hist-date-inp" max="${todayStr()}" value="${yesterday}">
+    <button class="sett-clear-btn" style="margin:0" onclick="editEntry(document.getElementById('hist-date-inp').value)">Add / Edit Entry</button>
+  </div>`;
+
   const entries = loadEntries();
   if (!entries.length) {
-    return `<div class="empty"><div class="ei">📋</div><div class="et">No entries yet.</div></div>`;
+    return addRow + `<div class="empty"><div class="ei">📋</div><div class="et">No entries yet.</div></div>`;
   }
-  return entries.map(entry => {
+  return addRow + entries.map(entry => {
     const c = QUESTIONS.filter(q => isCompliant(q.id, entry[q.id]) === true).length;
     const pct = Math.round((c / QUESTIONS.length) * 100);
     const sc = pct >= 85 ? 'hs-g' : pct >= 70 ? 'hs-a' : 'hs-r';
@@ -1340,7 +1348,7 @@ function navigate(v) {
   if (v === 'checkin') {
     editDate = null;
     ciSubmitted = false;
-    const existing = getEntryForDate(logDate());
+    const existing = getEntryForDate(todayStr());
     const draft    = loadDraft();
     ciAnswers = existing ? { ...existing } : (draft || {});
   }
@@ -1355,7 +1363,7 @@ function setAnswer(qid, val) {
 
 function submitCheckIn() {
   const isEditing = editDate !== null;
-  const date      = isEditing ? editDate : logDate();
+  const date      = isEditing ? editDate : todayStr();
   const returnTo  = isEditing ? 'history' : 'dashboard';
   const entry = { date };
   QUESTIONS.forEach(q => { entry[q.id] = ciAnswers[q.id] ?? null; });
