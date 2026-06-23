@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Health">
   <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="icon.png">
   <meta name="theme-color" content="#161616">
   <title>Health Tracker</title>
   <style>
@@ -868,9 +869,11 @@ async function unsubscribePush() {
   render();
 }
 
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 function updateBanner() {
   const enabled = localStorage.getItem('ht_push_enabled') === 'true';
-  document.getElementById('notif-banner').style.display = enabled ? 'none' : 'flex';
+  document.getElementById('notif-banner').style.display = (isIOS && !enabled) ? 'flex' : 'none';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1217,6 +1220,23 @@ function renderHistory() {
 }
 
 function renderAlerts() {
+  const scheduleRows = SCHEDULE.map(a => {
+    const t = `${String(a.hh).padStart(2,'0')}:${String(a.mm).padStart(2,'0')}`;
+    return `<div class="alert-row">
+      <span class="al-time-input" style="cursor:default;color:var(--accent)">${t}</span>
+      <div class="al-msg">${a.body}</div>
+    </div>`;
+  }).join('');
+
+  if (!isIOS) {
+    return `
+      <div class="notif-status ns-unk">Push alerts are only available on iPhone. Open this app on your iPhone Home Screen to enable them.</div>
+      <div class="card" style="margin-top:8px">
+        <div class="sec-hdr" style="margin-top:0">Daily schedule</div>
+        ${scheduleRows}
+      </div>`;
+  }
+
   const enabled = localStorage.getItem('ht_push_enabled') === 'true';
   const denied  = typeof Notification !== 'undefined' && Notification.permission === 'denied';
 
@@ -1231,14 +1251,6 @@ function renderAlerts() {
       <button class="en-btn" onclick="subscribePush()">Enable Alerts</button>`;
   }
 
-  const scheduleRows = SCHEDULE.map(a => {
-    const t = `${String(a.hh).padStart(2,'0')}:${String(a.mm).padStart(2,'0')}`;
-    return `<div class="alert-row">
-      <span class="al-time-input" style="cursor:default;color:var(--accent)">${t}</span>
-      <div class="al-msg">${a.body}</div>
-    </div>`;
-  }).join('');
-
   return `
     ${statusHtml}
     <div class="card" style="margin-top:8px">
@@ -1248,7 +1260,7 @@ function renderAlerts() {
     <div class="card info-card">
       <strong>How it works</strong><br>
       Alerts are sent via Web Push — they arrive as native notifications even when the app is closed.
-      On iPhone, make sure the app is added to your Home Screen before enabling.
+      Make sure the app is added to your Home Screen before enabling.
     </div>`;
 }
 
