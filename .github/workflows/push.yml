@@ -2,6 +2,9 @@ name: Push Notifications
 
 on:
   schedule:
+    # 07:00 London (06:00 UTC in BST, 07:00 UTC in GMT)
+    - cron: '0 6 * * *'
+    - cron: '0 7 * * *'
     # 12:00 London (11:00 UTC in BST, 12:00 UTC in GMT)
     - cron: '0 11 * * *'
     - cron: '0 12 * * *'
