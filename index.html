@@ -637,9 +637,14 @@ async function loadFromGist() {
         return;
       }
 
-      const localEntries = loadEntries();
-      const gistDates = new Set(gistEntries.map(e => e.date));
-      const localOnly = localEntries.filter(e => !gistDates.has(e.date));
+      const localEntries  = loadEntries();
+      const gistDates     = new Set(gistEntries.map(e => e.date));
+      const latestGistDate = gistEntries.length ? gistEntries[0].date : null;
+      // Only keep local-only entries newer than the latest Gist entry.
+      // Older local-only entries were deleted on another device and should not be restored.
+      const localOnly = localEntries.filter(e =>
+        !gistDates.has(e.date) && (!latestGistDate || e.date > latestGistDate)
+      );
       const merged = [...gistEntries, ...localOnly].sort((a,b) => b.date.localeCompare(a.date));
       localStorage.setItem(KEY, JSON.stringify(merged));
       if (localOnly.length > 0) await saveToGist(merged);
