@@ -373,12 +373,6 @@
     .ci-lock { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); flex-shrink: 0; }
 
     /* ━━━ HISTORY ━━━ */
-    .add-entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-    .add-entry-row input[type="date"] {
-      flex: 1; background: var(--surface); color: var(--text);
-      border: 1.5px solid var(--tog-border); border-radius: 8px;
-      padding: 7px 10px; font-size: 13px;
-    }
     .hist-card {
       background: var(--surface); border-radius: var(--radius-card);
       padding: 12px 14px; margin-bottom: 8px;
@@ -651,6 +645,7 @@ async function loadFromGist() {
       if (localOnly.length > 0) await saveToGist(merged);
     }
     setSyncStatus('synced');
+    autoFillMissedDays();
   } catch {
     setSyncStatus('error');
   }
@@ -682,6 +677,38 @@ async function saveToGist(entries) {
 // STORAGE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const KEY = 'ht_v1';
+
+function missedEntry(date) {
+  const e = { date };
+  QUESTIONS.forEach(q => { e[q.id] = ZERO_IDS.has(q.id) ? true : false; });
+  return e;
+}
+
+// Fill any un-logged days (before today) with all-missed entries.
+// Only fills gaps between the earliest existing entry and yesterday.
+function autoFillMissedDays(saveBack = true) {
+  const entries = loadEntries();
+  if (!entries.length) return;
+  const entryDates = new Set(entries.map(e => e.date));
+  const earliest   = entries[entries.length - 1].date; // sorted newest-first
+  const yesterday  = localDateStr(new Date(new Date() - 86400000));
+
+  const added = [];
+  let d = new Date(yesterday + 'T12:00:00');
+  const stop = new Date(earliest + 'T12:00:00');
+  while (d >= stop) {
+    const ds = localDateStr(d);
+    if (!entryDates.has(ds)) added.push(missedEntry(ds));
+    d.setDate(d.getDate() - 1);
+  }
+
+  if (added.length) {
+    const merged = [...entries, ...added].sort((a,b) => b.date.localeCompare(a.date));
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    if (saveBack) saveToGist(merged);
+    render();
+  }
+}
 
 function loadEntries() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
@@ -1197,17 +1224,11 @@ function renderCheckIn() {
 }
 
 function renderHistory() {
-  const yesterday = localDateStr(new Date(new Date() - 86400000));
-  const addRow = `<div class="add-entry-row">
-    <input type="date" id="hist-date-inp" max="${todayStr()}" value="${yesterday}">
-    <button class="sett-clear-btn" style="margin:0" onclick="editEntry(document.getElementById('hist-date-inp').value)">Add / Edit Entry</button>
-  </div>`;
-
   const entries = loadEntries();
   if (!entries.length) {
-    return addRow + `<div class="empty"><div class="ei">📋</div><div class="et">No entries yet.</div></div>`;
+    return `<div class="empty"><div class="ei">📋</div><div class="et">No entries yet.</div></div>`;
   }
-  return addRow + entries.map(entry => {
+  return entries.map(entry => {
     const c = QUESTIONS.filter(q => isCompliant(q.id, entry[q.id]) === true).length;
     const pct = Math.round((c / QUESTIONS.length) * 100);
     const sc = pct >= 85 ? 'hs-g' : pct >= 70 ? 'hs-a' : 'hs-r';
@@ -1437,6 +1458,7 @@ if (!localStorage.getItem('ht_migrated_v2')) {
 
 applyTheme();
 updateBanner();
+autoFillMissedDays(false); // fill gaps from local data only; Gist sync will save back
 render();
 loadFromGist();
 </script>
