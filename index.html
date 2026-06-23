@@ -1270,6 +1270,9 @@ function renderSettings() {
   const syncStatus = configured
     ? `<div class="notif-status ns-on">Sync configured — data syncs across devices via GitHub Gist.</div>`
     : `<div class="notif-status ns-unk">Sync not configured — enter your Gist ID and token below.</div>`;
+  const setupLinkBtn = configured
+    ? `<button class="sett-clear-btn" style="margin-top:8px" onclick="copySetupLink()">Copy Setup Link</button>`
+    : '';
   return `
     ${syncStatus}
     <div class="card" style="margin-top:8px">
@@ -1284,13 +1287,16 @@ function renderSettings() {
       </div>
       <button class="en-btn" style="margin-top:14px" onclick="saveGistConfig()">Save &amp; Sync</button>
       ${configured ? `<button class="sett-clear-btn" onclick="clearGistConfig()">Disconnect</button>` : ''}
+      ${setupLinkBtn}
+    </div>
+    <div class="card" style="margin-top:8px">
+      <div class="sec-hdr" style="margin-top:0">App updates</div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:10px">The app updates automatically — just reopen it from your Home Screen. No need to reinstall after updates.</div>
+      <button class="sett-clear-btn" onclick="location.reload(true)">Force Refresh</button>
     </div>
     <div class="card info-card">
-      <strong>How to get your Gist ID &amp; token</strong><br>
-      1. Go to <strong>gist.github.com</strong> and open your health-tracker-data.json Gist.<br>
-      2. Copy the ID from the URL (the long string after your username).<br>
-      3. Go to <strong>github.com → Settings → Developer settings → Personal access tokens</strong> and create a token with <strong>gist</strong> scope.<br>
-      4. Paste both above and tap Save &amp; Sync.
+      <strong>Setup Link</strong><br>
+      "Copy Setup Link" creates a URL with your credentials embedded. Save it to Notes — if you ever reinstall the app, open the link first and your credentials will load automatically.
     </div>`;
 }
 
@@ -1308,6 +1314,18 @@ function clearGistConfig() {
   localStorage.removeItem('ht_gist_id');
   localStorage.removeItem('ht_gist_token');
   render();
+}
+
+function copySetupLink() {
+  const { id, token } = getGistConfig();
+  if (!id || !token) return;
+  const encoded = btoa(JSON.stringify({ id, tok: token }));
+  const url = `${location.origin}${location.pathname}?s=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Setup link copied — paste it into Notes for safekeeping.');
+  }).catch(() => {
+    prompt('Copy this setup link and save it to Notes:', url);
+  });
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1370,6 +1388,17 @@ function render() {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/health-tracker/sw.js').catch(err => console.warn('SW:', err));
 }
+
+// ── Setup link: auto-load credentials from URL param ?s=BASE64 ──────
+try {
+  const sp = new URLSearchParams(location.search).get('s');
+  if (sp) {
+    const { id, tok } = JSON.parse(atob(sp));
+    if (id)  localStorage.setItem('ht_gist_id',    id);
+    if (tok) localStorage.setItem('ht_gist_token', tok);
+    history.replaceState({}, '', location.pathname); // strip param from URL
+  }
+} catch {}
 
 // ── One-time migration: shift all existing entry dates back by 1 day ──
 if (!localStorage.getItem('ht_migrated_v2')) {
