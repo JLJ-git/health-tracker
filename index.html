@@ -1317,43 +1317,8 @@ function renderAlerts() {
       <button class="en-btn" onclick="subscribePush()">Enable Alerts</button>`;
   }
 
-  // ── Badge debug panel ──────────────────────────────────────────────
-  const badgeSupported = 'setAppBadge' in navigator;
-  const now2 = new Date();
-  const curHr = now2.getHours() + now2.getMinutes() / 60;
-  const todayE = getEntryForDate(todayStr());
-  const draftA = loadDraft() || {};
-  const debugAnswers = todayE ? { ...todayE } : { ...draftA };
-  const debugUnlocked = QUESTIONS.filter(q => {
-    if (q.id === 'exercise') return false;
-    const h = LOCK_HOUR[q.id];
-    return h !== null && curHr >= h;
-  });
-  const debugUnlogged = debugUnlocked.filter(q => debugAnswers[q.id] === undefined || debugAnswers[q.id] === null);
-  const debugRows = QUESTIONS.filter(q => q.id !== 'exercise').map(q => {
-    const h = LOCK_HOUR[q.id];
-    const unlocked = h !== null && curHr >= h;
-    const answered = debugAnswers[q.id] !== undefined && debugAnswers[q.id] !== null;
-    const icon = !unlocked ? '🔒' : answered ? '✅' : '🔴';
-    return `<div style="font-size:12px;padding:2px 0;color:var(--text-2)">${icon} ${q.label} — ${!unlocked ? `locked until ${String(h).padStart(2,'0')}:00` : answered ? 'answered' : 'NEEDS BADGE'}</div>`;
-  }).join('');
-
-  const debugPanel = `<div class="card" style="margin-top:8px;border:1px dashed var(--text-3)">
-    <div class="sec-hdr" style="margin-top:0">Badge debug (temporary)</div>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:6px">
-      setAppBadge available: <strong>${badgeSupported}</strong><br>
-      Today logged: <strong>${!!todayE}</strong><br>
-      Draft loaded: <strong>${Object.keys(draftA).length > 0}</strong><br>
-      Current hour: <strong>${curHr.toFixed(2)}</strong><br>
-      Unlocked metrics: <strong>${debugUnlocked.length}</strong><br>
-      Badge count (unlogged): <strong>${debugUnlogged.length}</strong>
-    </div>
-    ${debugRows}
-  </div>`;
-
   return `
     ${statusHtml}
-    ${debugPanel}
     <div class="card" style="margin-top:8px">
       <div class="sec-hdr" style="margin-top:0">Daily schedule</div>
       ${scheduleRows}
