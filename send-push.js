@@ -1,7 +1,7 @@
 const webpush = require('web-push');
 
 const ALERTS = [
-  { hh:7,  mm:0,  title:'Health Tracker', body:'Log your sleep from last night'                                      },
+  { hh:6,  mm:0,  title:'Health Tracker', body:'Log your sleep from last night'                                      },
   { hh:12, mm:0,  title:'Health Tracker', body:'Break your fast, update your tracker and eat lunch'                  },
   { hh:18, mm:0,  title:'Dinner Time',    body:'Time to eat dinner'                                                  },
   { hh:20, mm:0,  title:'Start Fasting',  body:'Start fast — only water from now. Log your daily food and exercise.' },
